@@ -1,0 +1,25 @@
+{
+  "name": "unityfs-js",
+  "version": "0.2.1",
+  "description": "A high-performance, lightweight pure JavaScript Unity assets and bundle parser/extractor.",
+  "main": "index.js",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./exporters/*": "./exporters/*"
+  },
+  "keywords": [
+    "unity",
+    "unityfs",
+    "assetbundle",
+    "extractor",
+    "parser",
+    "live2d",
+    "web"
+  ],
+  "author": "",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
