@@ -1,4 +1,4 @@
-﻿import { UnityFS } from './unityfs/unityFile.js'
+import { UnityFS } from './unityfs/unityFile.js'
 import { registerDefaultClasses } from './core/registerDefaultClasses.js'
 import { ObjectRegistry } from './core/registry.js'
 
@@ -64,26 +64,44 @@ export function load(source, options = {}) {
  * @private
  */
 function _request(url, options = {}) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('GET', url, true)
-        xhr.responseType = 'arraybuffer'
+    // 优先使用 XMLHttpRequest（主流浏览器环境）
+    if (typeof XMLHttpRequest !== 'undefined') {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
+            xhr.open('GET', url, true)
+            xhr.responseType = 'arraybuffer'
 
-        xhr.onload = () => {
-            if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) {
-                try {
-                    const instance = _parse(xhr.response, options)
-                    resolve(instance)
-                } catch (err) {
-                    reject(`Parse Error: ${err.message}`)
+            xhr.onload = () => {
+                if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) {
+                    try {
+                        const instance = _parse(xhr.response, options)
+                        resolve(instance)
+                    } catch (err) {
+                        reject(`Parse Error: ${err.message}`)
+                    }
+                } else {
+                    reject(`HTTP Error: ${xhr.status} ${xhr.statusText}`)
                 }
-            } else {
-                reject(`HTTP Error: ${xhr.status} ${xhr.statusText}`)
             }
-        }
 
-        xhr.onerror = () => reject('Network Error')
-        xhr.send()
-    })
+            xhr.onerror = () => reject('Network Error')
+            xhr.send()
+        })
+    }
+
+    // 降级使用 fetch API（支持 Node.js 18+ 或无 XMLHttpRequest 的运行环境）
+    if (typeof fetch === 'function') {
+        return fetch(url)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP Error: ${res.status} ${res.statusText}`)
+                }
+                return res.arrayBuffer()
+            })
+            .then(buffer => _parse(buffer, options))
+            .catch(err => Promise.reject(err.message || err))
+    }
+
+    return Promise.reject(new Error('No XMLHttpRequest or fetch implementation found in this environment.'))
 }
 
