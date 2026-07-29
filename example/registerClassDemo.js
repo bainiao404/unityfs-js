@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UnityJs Custom Class Registration (Pluggable API) Demo
  *
  * This example demonstrates how to register a custom Unity class parser
@@ -8,9 +8,9 @@
  *   node registerClassDemo.js
  */
 
-import { UnityJs } from '../UnityJs/unityJs.js'
-import { NamedObject } from '../UnityJs/unityfs/classes/namedObject.js'
-import { ObjectReader } from '../UnityJs/unityfs/objectReader.js'
+import { registerClass } from '../index.js'
+import { NamedObject } from '../unityfs/classes/namedObject.js'
+import { ObjectReader } from '../unityfs/objectReader.js'
 
 // 1. Define a Custom Game Class extending NamedObject
 class CustomGameSettings extends NamedObject {
@@ -34,7 +34,7 @@ async function runDemo() {
     const CUSTOM_CLASS_NAME = 'CustomGameSettings'
 
     // 2. Register the Custom Class parser in UnityJs ObjectRegistry using the Pluggable API
-    UnityJs.registerClass(CUSTOM_CLASS_ID, CUSTOM_CLASS_NAME, CustomGameSettings)
+    registerClass(CUSTOM_CLASS_ID, CUSTOM_CLASS_NAME, CustomGameSettings)
     console.log(`[Demo] Registered class ID ${CUSTOM_CLASS_ID} as "${CUSTOM_CLASS_NAME}" successfully!`)
 
     // 3. Test verification by constructing a mock binary buffer

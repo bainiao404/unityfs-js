@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UnityJs Live2D Model Exporter Demo
  *
  * This example demonstrates how to use the UnityJs parsing engine to programmatically
@@ -40,8 +40,8 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { UnityJs } from '../UnityJs/unityJs.js'
-import { processLive2DModel } from '../UnityJs/exporters/live2dExporter.js'
+import { load } from '../index.js'
+import { processLive2DModel } from '../exporters/live2dExporter.js'
 
 // Resolve current directory for ESM
 const __filename = fileURLToPath(import.meta.url)
@@ -88,8 +88,8 @@ async function runDemo() {
     for (const filePath of bundleFiles) {
         try {
             const fileData = fs.readFileSync(filePath)
-            // UnityJs.load loads the binary buffer and returns an AssetManager instance
-            const manager = await UnityJs.load(fileData.buffer)
+            // load loads the binary buffer and returns an AssetManager instance
+            const manager = await load(fileData.buffer)
             if (manager) {
                 managers.push(manager)
                 console.log(`  Loaded: ${path.basename(filePath)}`)

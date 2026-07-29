@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UnityJs Audio (AudioClip) Exporter Demo
  *
  * This example demonstrates how to use the UnityJs parsing engine to extract
@@ -12,7 +12,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { UnityJs } from '../UnityJs/unityJs.js'
+import { load } from '../index.js'
 
 // Resolve current directory for ESM
 const __filename = fileURLToPath(import.meta.url)
@@ -53,7 +53,7 @@ async function runDemo() {
     for (const filePath of bundleFiles) {
         try {
             const fileData = fs.readFileSync(filePath)
-            const manager = await UnityJs.load(fileData.buffer)
+            const manager = await load(fileData.buffer)
             if (manager) {
                 managers.push(manager)
                 console.log(`  Loaded: ${path.basename(filePath)}`)

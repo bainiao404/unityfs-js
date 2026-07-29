@@ -25,17 +25,65 @@ unityfs-js/
 
 ## 快速接入与引入
 
-### 1. 网页端 (Browser - ES Module)
+### 1. 浏览器构建环境 (带打包工具 - Vite / Webpack 等)
 
-```javascript
-// 引入 unityfs-js 核心导出函数
-import { load } from 'unityfs-js'
+如果在支持构建打包的项目中，您可以通过 npm 安装包，并直接在代码中通过裸模块名导入：
 
-// 加载一个 AssetBundle
-const assetManager = await load('path/to/assets.bundle')
+```bash
+npm install unityfs-js
 ```
 
-### 2. 命令行端 (Node.js - ESM)
+```javascript
+import { load } from 'unityfs-js'
+
+// 加载一个 Web 服务器上的 AssetBundle
+const assetManager = await load('https://example.com/assets.bundle')
+```
+
+### 2. 纯原生 HTML 环境 (无打包工具 - Native ES Module)
+
+如果您在纯原生 HTML 网页中开发，无需任何打包构建工具，也可以利用现代浏览器原生支持的 `type="module"` 引入：
+
+#### 方式 A：通过静态文件路径直接引入
+将 `unityfs-js` 文件夹拷贝至您的项目静态资源目录下，并在 JS 中直接使用文件的相对或绝对路径引入 [index.js](index.js)：
+
+```html
+<script type="module">
+  // 直接引入 index.js 文件物理路径
+  import { load } from './assets/unityfs-js/index.js'
+
+  const assetManager = await load('./assets.bundle')
+  console.log('所有解析对象:', assetManager.getObjectInfos())
+</script>
+```
+
+#### 方式 B：通过 Import Maps 声明包别名引入
+如果您希望在多个 script 标签中统一使用 `import { ... } from 'unityfs-js'` 命名方式，可利用 `<script type="importmap">` 建立映射：
+
+```html
+<!-- 1. 在页面头部声明映射关系 -->
+<script type="importmap">
+  {
+    "imports": {
+      "unityfs-js": "./assets/unityfs-js/index.js",
+      "unityfs-js/exporters/": "./assets/unityfs-js/exporters/"
+    }
+  }
+</script>
+
+<!-- 2. 在业务模块中直接以包名导入 -->
+<script type="module">
+  import { load } from 'unityfs-js'
+  import { processLive2DModel } from 'unityfs-js/exporters/live2dExporter.js'
+
+  const assetManager = await load('./live2d_char.bundle')
+  // ... 业务逻辑
+</script>
+```
+
+### 3. 命令行端 (Node.js - ESM)
+
+在 Node.js 环境下使用该库时，需确保项目 `package.json` 中配置了 `"type": "module"`：
 
 ```javascript
 import { load } from 'unityfs-js'
@@ -148,24 +196,29 @@ assetManager.dispose()
 `exportFile(objectInfo, options)` 是数据导出的核心接口。
 
 - **支持的资源类型与输出说明**：
-    - `Texture2D`：支持导出为未压缩的 `RGBA32` 原始字节，或自动转码导出为标准的 `PNG`（支持 DXT1/5、BC7 等各类纹理压缩格式的自动解码）。
-    - `Sprite`：支持根据 Sprite 边界与网格数据自动对大图进行裁剪，并输出裁剪好的独立 `PNG` 图像。
-    - `AudioClip`：支持将 Unity 内存中的 FSB5 等音频容器重建并转码为 `WAV` / `OGG` 格式物理文件。
+    - `Texture2D` / `Sprite`：支持自动转码并解压 DXT1/5、BC7 等各种压缩纹理格式。并且支持通过 `options.type` 快捷配置直接输出不同格式的数据，无需用户手动转换。可配置的 `type` 格式包括：
+      - `'arrayBuffer'` (默认值)：输出 PNG 二进制 `ArrayBuffer` 数据。
+      - `'rgbaArray'`：输出解码后未经 PNG 压缩的原始垂直翻转 `RGBA32` 像素字节数组 (`Uint8Array`)。
+      - `'canvas'`：直接输出绘制好图像的 HTML5 `<canvas>` 节点 (仅限浏览器环境，若不支持 OffscreenCanvas 则自动回退)。
+      - `'offscreenCanvas'`：输出 `OffscreenCanvas` 对象 (仅限浏览器环境)。
+      - `'blob'`：输出标准的 PNG `Blob` 物理对象。
+      - `'blobURL'`：直接创建并返回对应的 Blob 临时预览 URL 字符串 (`blob:http...`)，可以直接赋值给 `<img>` 标签的 `src` 属性。
+      - `'dataURL'`：输出 Base64 格式的 Data URL 字符串 (如 `data:image/png;base64,...`)。
+    - `AudioClip`：支持将 Unity 内存中的 FSB5 等音频容器重建并转码为 `WAV` / `OGG` 格式物理文件。与 `Texture2D` / `Sprite` 类似，它同样支持通过 `options.type` 快捷输出不同的数据格式（`arrayBuffer`, `blob`, `blobURL`, `dataURL`），无需用户手动转换。
     - `TextAsset`：直接提取为原始文本字符串或 ArrayBuffer。
     - `Mesh`：默认导出为标准的 `.obj` 模型文本文件。
     - `SkinnedMeshRenderer`：在注入 `three` 依赖后，自动组装骨骼结构并导出为标准的 `.glb` 二进制骨骼动画模型。
 
 ```javascript
-// 导出 Texture2D 示例
+// 示例 1: 默认导出 PNG 二进制 ArrayBuffer
 const textureInfo = assetManager.getObjectInfosByClass('Texture2D')[0]
 const file = await assetManager.exportFile(textureInfo)
-// 返回结构：
-// {
-//   src: "Assets/Textures/logo.png",
-//   data: { raw: Uint8Array }, // 转码后的 PNG 二进制数据
-//   width: 512,
-//   height: 512
-// }
+// 返回结构： { src: "...", data: { raw: ArrayBuffer, width: 512, height: 512 } }
+
+// 示例 2: 快捷导出 Blob URL 直接用于前端 img.src 渲染 (无需手动转换)
+const imgUrlFile = await assetManager.exportFile(textureInfo, { type: 'blobURL' })
+const imgElement = document.createElement('img')
+imgElement.src = imgUrlFile.data.raw // 直接为 blob:http://... 字符串
 ```
 
 ---
@@ -202,6 +255,71 @@ const result = await processLive2DModel(live2dObject, assetManager)
 const spriteInfo = assetManager.getObjectInfosByClass('Sprite')[0]
 // 启用 cutting 参数以自动切除图集周边的空白透明像素
 const result = await assetManager.exportSprite(spriteInfo, { cutting: true })
+```
+
+### 3. 不同媒体类型的提取与网页端预览演示
+
+这里展示了如何提取常见的文本、图片、音频及 3D 模型资产，并在 Web 浏览器环境下将其转换为可视化/可播放的预览媒介。
+
+#### A. 文本资产 (TextAsset) 提取与预览
+```javascript
+// 1. 获取并提取 TextAsset 文本
+const textAssetInfo = assetManager.getObjectInfosByClass('TextAsset')[0]
+const textFile = await assetManager.exportFile(textAssetInfo, { type: 'text' })
+
+// 2. 网页端直接渲染至 DOM 容器
+document.getElementById('text-preview-box').textContent = textFile.data.raw
+```
+
+#### B. 图片与精灵图 (Texture2D / Sprite) 提取与预览
+```javascript
+// 1. 获取 Texture2D 资源对象
+const textureInfo = assetManager.getObjectInfosByClass('Texture2D')[0]
+
+// 2. 快捷提取并输出 Blob URL（推荐：内部自动完成转码，免去手动 new Blob 与 createObjectURL 步骤）
+const textureFile = await assetManager.exportFile(textureInfo, { type: 'blobURL' })
+
+// 3. 赋值给 <img> 标签的 src 属性进行预览
+document.getElementById('image-preview-tag').src = textureFile.data.raw  // 此时 raw 是 "blob:http://..."
+
+// 4. 对 Sprite (精灵大图) 进行自动裁切，并同样快捷输出 Blob URL
+const spriteInfo = assetManager.getObjectInfosByClass('Sprite')[0]
+const spriteFile = await assetManager.exportSprite(spriteInfo, { cutting: true, type: 'blobURL' })
+document.getElementById('sprite-preview-tag').src = spriteFile.data.raw
+```
+
+#### C. 音频 (AudioClip) 提取与预览
+```javascript
+// 1. 获取 AudioClip 资源对象
+const audioInfo = assetManager.getObjectInfosByClass('AudioClip')[0]
+
+// 2. 快捷提取并输出 Blob URL（推荐：内部自动完成转码，免去手动 new Blob 与 createObjectURL 步骤）
+const audioFile = await assetManager.exportFile(audioInfo, { type: 'blobURL' })
+
+// 3. 赋值给 <audio> 标签的 src 属性直接播放进行预览
+const audioElement = document.getElementById('audio-preview-tag')
+audioElement.src = audioFile.data.raw  // 此时 raw 是 "blob:http://..."
+audioElement.play()
+```
+
+#### D. 三维模型 (Mesh / SkinnedMeshRenderer) 提取与预览
+```javascript
+// 1. 导出 3D Mesh 网格（默认导出为标准的 .obj 模型文本）
+const meshInfo = assetManager.getObjectInfosByClass('Mesh')[0]
+const meshFile = await assetManager.exportFile(meshInfo, { type: 'text' })
+console.log('OBJ 模型内容:', meshFile.data.raw)
+
+// 2. 导出带骨骼蒙皮的模型 (SkinnedMeshRenderer) 为 GLB 格式二进制
+// 注意：导出 GLB 前必须确保已执行 setDependencies({ THREE, GLTFExporter }) 依赖注入
+const skinnedMeshInfo = assetManager.getObjectInfosByClass('SkinnedMeshRenderer')[0]
+const glbFile = await assetManager.exportFile(skinnedMeshInfo, { type: 'arrayBuffer' })
+
+// 3. 在网页端使用 Three.js GLTFLoader 载入并预览
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+const loader = new GLTFLoader()
+loader.parse(glbFile.data.raw, '', (gltf) => {
+    scene.add(gltf.scene) // 添加模型至 WebGL 3D 渲染场景
+})
 ```
 
 ---

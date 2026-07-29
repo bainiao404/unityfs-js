@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UnityJs 3D Mesh & SkinnedMeshRenderer Exporter Demo
  *
  * This example demonstrates how to configure THREE and GLTFExporter dependency injection
@@ -11,14 +11,14 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { UnityJs } from '../UnityJs/unityJs.js'
+import { load, setDependencies } from '../index.js'
 
 // Import THREE and GLTFExporter for dependency injection in Node.js
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-// Inject the 3D dependencies into UnityJs
-UnityJs.setDependencies({ THREE, GLTFExporter })
+// Inject the 3D dependencies
+setDependencies({ THREE, GLTFExporter })
 
 // Resolve current directory for ESM
 const __filename = fileURLToPath(import.meta.url)
@@ -59,7 +59,7 @@ async function runDemo() {
     for (const filePath of bundleFiles) {
         try {
             const fileData = fs.readFileSync(filePath)
-            const manager = await UnityJs.load(fileData.buffer)
+            const manager = await load(fileData.buffer)
             if (manager) {
                 managers.push(manager)
                 console.log(`  Loaded: ${path.basename(filePath)}`)
