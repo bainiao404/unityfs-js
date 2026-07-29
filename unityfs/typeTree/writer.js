@@ -24,7 +24,7 @@ const defaultValues = {
     double: 0.0,
     string: '',
     TypelessData: new Uint8Array(0),
-    char: '\0\0'
+    char: '\0\0',
 }
 
 const typeWriters = {
@@ -62,7 +62,7 @@ const typeWriters = {
     char: (writer, val) => {
         const bytes = utf8Encoder.encode(val)
         writer.write(bytes.subarray(0, 2))
-    }
+    },
 }
 
 export function writeType(type, writer, val, size) {

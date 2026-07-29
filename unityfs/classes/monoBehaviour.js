@@ -86,7 +86,7 @@ export class MonoBehaviour extends Behaviour {
 
         const script = {
             fileID: this.script.fileID,
-            pathID: this.script.pathID.toString()
+            pathID: this.script.pathID.toString(),
         }
         return { script, name: this.name, _bytes: data }
     }

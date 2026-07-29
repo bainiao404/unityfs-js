@@ -292,7 +292,7 @@ export class Texture2D extends Texture {
         return this._textureFormat
     }
     set textureFormat(val) {
-        let formatId = typeof val === 'number' ? val : Object.keys(TextureFormat).find(k => TextureFormat[k] === val)
+        let formatId = typeof val === 'number' ? val : Object.keys(TextureFormat).find((k) => TextureFormat[k] === val)
         formatId = Number(formatId)
         if (this.fields) {
             this.fields.m_TextureFormat = formatId

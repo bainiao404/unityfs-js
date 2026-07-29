@@ -46,9 +46,9 @@ import { processLive2DModel } from 'unityfs-js/exporters/live2dExporter.js'
 
 为了获得高性能的块解压性能（LZ4 与 LZMA 解密），本库已将对应的 WebAssembly 编解码器以二进制 Base64 形式完全内联。
 
-*   **开箱即用（Zero-Configuration）**：无需配置任何静态资源拷贝插件（如 `copy-webpack-plugin` 或 `vite-plugin-static-copy`），也无需在 HTML 页面中手动引入任何外部加载脚本。
-*   **多端自动兼容**：无论是 Web 浏览器端、Node.js 命令行环境（CLI）、Electron 桌面客户端还是 Cordova 移动端，WebAssembly 均会在模块加载时在内存中自动同步编译并启用。
-*   **安全降级兜底**：若运行环境由于特殊限制（例如 CSP 安全策略）无法加载或不支持 WebAssembly，解析器将自动无缝降级使用纯 JS 实现的慢速解码器，保证业务正常运行。
+- **开箱即用（Zero-Configuration）**：无需配置任何静态资源拷贝插件（如 `copy-webpack-plugin` 或 `vite-plugin-static-copy`），也无需在 HTML 页面中手动引入任何外部加载脚本。
+- **多端自动兼容**：无论是 Web 浏览器端、Node.js 命令行环境（CLI）、Electron 桌面客户端还是 Cordova 移动端，WebAssembly 均会在模块加载时在内存中自动同步编译并启用。
+- **安全降级兜底**：若运行环境由于特殊限制（例如 CSP 安全策略）无法加载或不支持 WebAssembly，解析器将自动无缝降级使用纯 JS 实现的慢速解码器，保证业务正常运行。
 
 ## 核心 API 使用指南
 
@@ -56,18 +56,18 @@ import { processLive2DModel } from 'unityfs-js/exporters/live2dExporter.js'
 
 load(source, options) 为本库的主入口函数，用于解析 Unity 资源包。
 
-*   **参数说明**：
-    *   `source`：支持传入 `string` (资源文件的 URL 地址)、`ArrayBuffer` 或 `Uint8Array` (文件的二进制数据)。
-    *   `options`：可选配置对象：
-        *   `unityRevision`：`string`，指定 Unity 的修正版本号（如 `2020.3.17f1`），用于在部分低版本或无版本头信息的资源包中辅助类型树对齐。
-        *   `sliceBeforeSecondUnityFS`：`boolean`，若资源包头部包含多余垃圾字节或重复的文件头，设为 `true` 可自动扫描并截取第二个 `UnityFS` 标志位之后的数据。
-*   **返回值**：返回一个 Promise，解析成功后 resolve 实例化后的 `AssetManager` 对象。
+- **参数说明**：
+    - `source`：支持传入 `string` (资源文件的 URL 地址)、`ArrayBuffer` 或 `Uint8Array` (文件的二进制数据)。
+    - `options`：可选配置对象：
+        - `unityRevision`：`string`，指定 Unity 的修正版本号（如 `2020.3.17f1`），用于在部分低版本或无版本头信息的资源包中辅助类型树对齐。
+        - `sliceBeforeSecondUnityFS`：`boolean`，若资源包头部包含多余垃圾字节或重复的文件头，设为 `true` 可自动扫描并截取第二个 `UnityFS` 标志位之后的数据。
+- **返回值**：返回一个 Promise，解析成功后 resolve 实例化后的 `AssetManager` 对象。
 
 ```javascript
 // 示例 1: 从二进制数据加载
 const fileData = await fs.promises.readFile('main.assets')
 const assetManager = await load(fileData.buffer, {
-    unityRevision: '2019.4.15f1'
+    unityRevision: '2019.4.15f1',
 })
 
 // 示例 2: 网页端网络请求加载
@@ -81,7 +81,7 @@ const assetManager = await load('https://example.com/assets.bundle')
 
 ```javascript
 // 加载伴生资源数据
-const resSData = await fetch('resources.assets.resS').then(res => res.arrayBuffer())
+const resSData = await fetch('resources.assets.resS').then((res) => res.arrayBuffer())
 
 // 注册至管理器。注册后，AssetManager 在解析 Texture2D/AudioClip 时会自动关联并截取数据段
 assetManager.registerResourceFile('resources.assets.resS', new Uint8Array(resSData))
@@ -138,22 +138,22 @@ assetManager.dispose()
 
 解析后的资源在管理器中被称为 `ObjectInfo`。它是一个轻量级的元数据包裹对象，包含 `pathID`、`classID`、`size` 以及资源名称，其实际的序列化数据是按需懒加载的。
 
-*   `assetManager.getObjectInfos(filterFunc)`：获取并过滤所有对象信息。
-*   `assetManager.getObjectInfosByClass(className)`：根据 Unity 类名获取对象（常用类名：`Texture2D`、`Sprite`、`AudioClip`、`MonoBehaviour`、`TextAsset`、`Mesh`）。
-*   `assetManager.getObjectInfoByPathId(pathId)`：根据唯一的 PathID 检索对象。
-*   `assetManager.getObjectInfoByName(name)`：根据资源名称精确查找。
+- `assetManager.getObjectInfos(filterFunc)`：获取并过滤所有对象信息。
+- `assetManager.getObjectInfosByClass(className)`：根据 Unity 类名获取对象（常用类名：`Texture2D`、`Sprite`、`AudioClip`、`MonoBehaviour`、`TextAsset`、`Mesh`）。
+- `assetManager.getObjectInfoByPathId(pathId)`：根据唯一的 PathID 检索对象。
+- `assetManager.getObjectInfoByName(name)`：根据资源名称精确查找。
 
 ### 2. 导出资源文件 (exportFile)
 
 `exportFile(objectInfo, options)` 是数据导出的核心接口。
 
-*   **支持的资源类型与输出说明**：
-    *   `Texture2D`：支持导出为未压缩的 `RGBA32` 原始字节，或自动转码导出为标准的 `PNG`（支持 DXT1/5、BC7 等各类纹理压缩格式的自动解码）。
-    *   `Sprite`：支持根据 Sprite 边界与网格数据自动对大图进行裁剪，并输出裁剪好的独立 `PNG` 图像。
-    *   `AudioClip`：支持将 Unity 内存中的 FSB5 等音频容器重建并转码为 `WAV` / `OGG` 格式物理文件。
-    *   `TextAsset`：直接提取为原始文本字符串或 ArrayBuffer。
-    *   `Mesh`：默认导出为标准的 `.obj` 模型文本文件。
-    *   `SkinnedMeshRenderer`：在注入 `three` 依赖后，自动组装骨骼结构并导出为标准的 `.glb` 二进制骨骼动画模型。
+- **支持的资源类型与输出说明**：
+    - `Texture2D`：支持导出为未压缩的 `RGBA32` 原始字节，或自动转码导出为标准的 `PNG`（支持 DXT1/5、BC7 等各类纹理压缩格式的自动解码）。
+    - `Sprite`：支持根据 Sprite 边界与网格数据自动对大图进行裁剪，并输出裁剪好的独立 `PNG` 图像。
+    - `AudioClip`：支持将 Unity 内存中的 FSB5 等音频容器重建并转码为 `WAV` / `OGG` 格式物理文件。
+    - `TextAsset`：直接提取为原始文本字符串或 ArrayBuffer。
+    - `Mesh`：默认导出为标准的 `.obj` 模型文本文件。
+    - `SkinnedMeshRenderer`：在注入 `three` 依赖后，自动组装骨骼结构并导出为标准的 `.glb` 二进制骨骼动画模型。
 
 ```javascript
 // 导出 Texture2D 示例
@@ -252,7 +252,7 @@ Unity 游戏经常使用挂载了自定义 C# 脚本的 `MonoBehaviour` 节点�
 
 ```javascript
 // 1. 获取对应的 MonoBehaviour 资产信息
-const monoInfo = assetManager.getObjectInfosByClass('MonoBehaviour').find(info => info.name === 'character_template')
+const monoInfo = assetManager.getObjectInfosByClass('MonoBehaviour').find((info) => info.name === 'character_template')
 const mono = monoInfo.object
 
 // 2. 查看当前的某些自定义属性 (如 hp 属性)
@@ -279,11 +279,12 @@ await fs.promises.writeFile('game_config_repacked.bundle', repackedBytes)
 ```
 
 #### 高阶：CAB 内置 CRC-32 校验对齐与欺骗 (CRC Spoofing)
+
 大部分 Unity 在线游戏在热更新或加载 AssetBundle 时，会读取内部 CAB 序列化文件头部的 CRC 校验值以验证包体是否被篡改。
 为了解决这一校验问题，`unityfs-js` 在重包时提供了**全自动的 CRC 对齐校验功能**：
 
-*   **默认自动对齐（推荐）**：如果您没有手动设置 `targetCrc`，在序列化时，本库会**自动计算并提取加载的原资源包的原始 CAB CRC-32 校验值**作为目标。在重新打包输出时，会自动在数据末尾使用内置的近世代数 CRC 碰撞算法计算并填充 4 字节的碰撞因子，使得修改并重包后的文件 CRC-32 校验值与原包完全一致，从而实现无感知绕过客户端校验。因此，**在绝大多数情况下，您不需要进行任何手动配置即可直接使用**。
-*   **手动设置（高级自定义）**：如果您需要强制将重包后的 CRC 校验值对齐到特定的自定义校验和，可以在序列化前手动注入十进制的 `targetCrc`：
+- **默认自动对齐（推荐）**：如果您没有手动设置 `targetCrc`，在序列化时，本库会**自动计算并提取加载的原资源包的原始 CAB CRC-32 校验值**作为目标。在重新打包输出时，会自动在数据末尾使用内置的近世代数 CRC 碰撞算法计算并填充 4 字节的碰撞因子，使得修改并重包后的文件 CRC-32 校验值与原包完全一致，从而实现无感知绕过客户端校验。因此，**在绝大多数情况下，您不需要进行任何手动配置即可直接使用**。
+- **手动设置（高级自定义）**：如果您需要强制将重包后的 CRC 校验值对齐到特定的自定义校验和，可以在序列化前手动注入十进制的 `targetCrc`：
 
 ```javascript
 // 手动指定目标的 CAB CRC-32 校验值（如果不设置，本库将默认自动使用原包的 CRC 校验值进行对齐）
@@ -323,12 +324,12 @@ node exportMeshDemo.js <资源包路径或文件夹>
 
 ## 致谢与开源参考
 
-*   [BinomialLLC/crunch](https://github.com/BinomialLLC/crunch) (高性能纹理压缩)
-*   [Unity-Technologies/crunch](https://github.com/Unity-Technologies/crunch/tree/unity)
-*   [aelurum/AssetStudio](https://github.com/aelurum/AssetStudio) (C# 资源查看器原型参考)
-*   [bc7-decoder](https://github.com/Alexander-Holm/bc7-decoder) (BC7 图像解码器)
-*   [ashduino101/WebAssetStudio](https://github.com/ashduino101) (JavaScript 核心解析原型参考)
-*   [mikalv/python-fsb5](https://github.com/mikalv/python-fsb5) (FSB5 音频提取与重建逻辑参考)
-*   [Vorbis I Specification](https://xiph.org/vorbis/doc/Vorbis_I_spec.html) (Vorbis 比特流与 Codebook 校验规范)
-*   [Perfare/UnityLive2DExtractor](https://github.com/Perfare/UnityLive2DExtractor) (Live2D Cubism 3/4 资源提取逻辑原型参考)
-*   [mos9527/UnityPyLive2DExtractor](https://github.com/mos9527/UnityPyLive2DExtractor) (基于 Python/UnityPy 提取 Live2D 动画与物理配置文件参考)
+- [BinomialLLC/crunch](https://github.com/BinomialLLC/crunch) (高性能纹理压缩)
+- [Unity-Technologies/crunch](https://github.com/Unity-Technologies/crunch/tree/unity)
+- [aelurum/AssetStudio](https://github.com/aelurum/AssetStudio) (C# 资源查看器原型参考)
+- [bc7-decoder](https://github.com/Alexander-Holm/bc7-decoder) (BC7 图像解码器)
+- [ashduino101/WebAssetStudio](https://github.com/ashduino101) (JavaScript 核心解析原型参考)
+- [mikalv/python-fsb5](https://github.com/mikalv/python-fsb5) (FSB5 音频提取与重建逻辑参考)
+- [Vorbis I Specification](https://xiph.org/vorbis/doc/Vorbis_I_spec.html) (Vorbis 比特流与 Codebook 校验规范)
+- [Perfare/UnityLive2DExtractor](https://github.com/Perfare/UnityLive2DExtractor) (Live2D Cubism 3/4 资源提取逻辑原型参考)
+- [mos9527/UnityPyLive2DExtractor](https://github.com/mos9527/UnityPyLive2DExtractor) (基于 Python/UnityPy 提取 Live2D 动画与物理配置文件参考)

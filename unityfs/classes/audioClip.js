@@ -155,9 +155,7 @@ export class AudioClip extends NamedObject {
         if (!data) return 'wav'
         const len = data.byteLength ?? data.length ?? 0
         const readLen = Math.min(32, len)
-        const view = data instanceof ArrayBuffer
-            ? new Uint8Array(data, 0, readLen)
-            : data.subarray(0, readLen)
+        const view = data instanceof ArrayBuffer ? new Uint8Array(data, 0, readLen) : data.subarray(0, readLen)
         let txt = utf8Decoder.decode(view)
         if (txt.indexOf('ftyp') !== -1) {
             return 'm4a'
@@ -174,4 +172,3 @@ export class AudioClip extends NamedObject {
         return 'wav'
     }
 }
-

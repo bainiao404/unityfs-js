@@ -1,15 +1,5 @@
-﻿import { Vector2, Vector3, Vector4, Quaternion, Color, Matrix4x4 } from '../unityfs/basicTypes.js'
+import { Vector2, Vector3, Vector4, Quaternion, Color, Matrix4x4 } from '../unityfs/basicTypes.js'
 import { decodeUTF8 } from './utf8.js'
-
-const floatBuf = new ArrayBuffer(8)
-const floatU8 = new Uint8Array(floatBuf)
-const floatF32 = new Float32Array(floatBuf)
-const floatF64 = new Float64Array(floatBuf)
-const floatU32 = new Uint32Array(floatBuf)
-const floatI64 = new BigInt64Array(floatBuf)
-const floatU64 = new BigUint64Array(floatBuf)
-
-const utf8Decoder = new TextDecoder('utf-8')
 
 export const SEEK_SET = 0
 export const SEEK_CUR = 1
@@ -27,6 +17,15 @@ export class BinaryReader {
         this.endian = endian
         this.version = [0, 0, 0, 0]
         this.platform = 'No Target'
+
+        // 实例隔离的二进制缓冲区，防范并发场景下的全局单例数据竞争/污染
+        this.floatBuf = new ArrayBuffer(8)
+        this.floatU8 = new Uint8Array(this.floatBuf)
+        this.floatF32 = new Float32Array(this.floatBuf)
+        this.floatF64 = new Float64Array(this.floatBuf)
+        this.floatU32 = new Uint32Array(this.floatBuf)
+        this.floatI64 = new BigInt64Array(this.floatBuf)
+        this.floatU64 = new BigUint64Array(this.floatBuf)
     }
 
     /**
@@ -101,9 +100,12 @@ export class BinaryReader {
 
     readCString(limit = 32768) {
         let s = ''
-        let c
         let i = 0
-        while ((c = this.read(1)[0]) !== 0) {
+        const len = this.data.length
+        // 零对象分配优化：直接索引基础类型数组读取，规避临时对象生成产生的 GC 开销
+        while (this.offset < len) {
+            const c = this.data[this.offset++]
+            if (c === 0) break
             s += String.fromCharCode(c)
             i++
             if (i > limit) break
@@ -112,29 +114,40 @@ export class BinaryReader {
     }
 
     readCodeString(nbytes, encoding) {
-        let uint8Array = this.readCopy(nbytes)
+        if (this.offset + nbytes > this.data.length) {
+            throw new Error('Range error: readCodeString out of bounds')
+        }
+        const start = this.offset
+        this.offset += nbytes
+
         if (encoding === 'ascii') {
             let str = ''
-            for (let i = 0; i < uint8Array.length; i++) {
-                str += String.fromCharCode(uint8Array[i])
+            for (let i = start; i < this.offset; i++) {
+                str += String.fromCharCode(this.data[i])
             }
             return str
         } else if (encoding === 'utf16le') {
             let str = ''
-            for (let i = 0; i < uint8Array.length; i += 2) {
-                const code = uint8Array[i] + (uint8Array[i + 1] << 8)
+            for (let i = start; i < this.offset; i += 2) {
+                const code = this.data[i] + (this.data[i + 1] << 8)
                 str += String.fromCharCode(code)
             }
             return str
         } else if (encoding === 'utf-8') {
-            return decodeUTF8(uint8Array)
+            return decodeUTF8(this.data.subarray(start, this.offset))
         } else {
             throw new Error("Unsupported encoding type. Use 'ascii', 'utf16le', or 'utf-8'.")
         }
     }
 
     readChars(count) {
-        return utf8Decoder.decode(this.read(count))
+        if (this.offset + count > this.data.length) {
+            throw new Error('Range error: readChars out of bounds')
+        }
+        const start = this.offset
+        this.offset += count
+        // 零拷贝优化：直接在 underlying 数组切片上进行 UTF-8 混合解码
+        return decodeUTF8(this.data.subarray(start, this.offset))
     }
 
     readString() {
@@ -241,17 +254,29 @@ export class BinaryReader {
             throw new Error('Range error: readUInt64 out of bounds')
         }
         const currentOffset = this.offset
+        const u8 = this.floatU8
+        // 循环展开优化：避免 V8 循环计算开销，直接平铺装载
         if (this.endian === 'little') {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + i]
-            }
+            u8[0] = this.data[currentOffset]
+            u8[1] = this.data[currentOffset + 1]
+            u8[2] = this.data[currentOffset + 2]
+            u8[3] = this.data[currentOffset + 3]
+            u8[4] = this.data[currentOffset + 4]
+            u8[5] = this.data[currentOffset + 5]
+            u8[6] = this.data[currentOffset + 6]
+            u8[7] = this.data[currentOffset + 7]
         } else {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + 7 - i]
-            }
+            u8[0] = this.data[currentOffset + 7]
+            u8[1] = this.data[currentOffset + 6]
+            u8[2] = this.data[currentOffset + 5]
+            u8[3] = this.data[currentOffset + 4]
+            u8[4] = this.data[currentOffset + 3]
+            u8[5] = this.data[currentOffset + 2]
+            u8[6] = this.data[currentOffset + 1]
+            u8[7] = this.data[currentOffset]
         }
         this.offset += 8
-        return floatU64[0]
+        return this.floatU64[0]
     }
 
     readInt64() {
@@ -259,17 +284,28 @@ export class BinaryReader {
             throw new Error('Range error: readInt64 out of bounds')
         }
         const currentOffset = this.offset
+        const u8 = this.floatU8
         if (this.endian === 'little') {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + i]
-            }
+            u8[0] = this.data[currentOffset]
+            u8[1] = this.data[currentOffset + 1]
+            u8[2] = this.data[currentOffset + 2]
+            u8[3] = this.data[currentOffset + 3]
+            u8[4] = this.data[currentOffset + 4]
+            u8[5] = this.data[currentOffset + 5]
+            u8[6] = this.data[currentOffset + 6]
+            u8[7] = this.data[currentOffset + 7]
         } else {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + 7 - i]
-            }
+            u8[0] = this.data[currentOffset + 7]
+            u8[1] = this.data[currentOffset + 6]
+            u8[2] = this.data[currentOffset + 5]
+            u8[3] = this.data[currentOffset + 4]
+            u8[4] = this.data[currentOffset + 3]
+            u8[5] = this.data[currentOffset + 2]
+            u8[6] = this.data[currentOffset + 1]
+            u8[7] = this.data[currentOffset]
         }
         this.offset += 8
-        return floatI64[0]
+        return this.floatI64[0]
     }
 
     readVarInt() {
@@ -306,8 +342,8 @@ export class BinaryReader {
         const intVal =
             sign | (((((nonsign << renormShift) >> 3) + ((0x70 - renormShift) << 23)) | infNanMask) & ~zeroMask)
 
-        floatU32[0] = intVal
-        return floatF32[0]
+        this.floatU32[0] = intVal
+        return this.floatF32[0]
     }
 
     readFloat32() {
@@ -315,19 +351,20 @@ export class BinaryReader {
             throw new Error('Range error: readFloat32 out of bounds')
         }
         const currentOffset = this.offset
+        const u8 = this.floatU8
         if (this.endian === 'little') {
-            floatU8[0] = this.data[currentOffset]
-            floatU8[1] = this.data[currentOffset + 1]
-            floatU8[2] = this.data[currentOffset + 2]
-            floatU8[3] = this.data[currentOffset + 3]
+            u8[0] = this.data[currentOffset]
+            u8[1] = this.data[currentOffset + 1]
+            u8[2] = this.data[currentOffset + 2]
+            u8[3] = this.data[currentOffset + 3]
         } else {
-            floatU8[0] = this.data[currentOffset + 3]
-            floatU8[1] = this.data[currentOffset + 2]
-            floatU8[2] = this.data[currentOffset + 1]
-            floatU8[3] = this.data[currentOffset]
+            u8[0] = this.data[currentOffset + 3]
+            u8[1] = this.data[currentOffset + 2]
+            u8[2] = this.data[currentOffset + 1]
+            u8[3] = this.data[currentOffset]
         }
         this.offset += 4
-        return floatF32[0]
+        return this.floatF32[0]
     }
 
     readFloat64() {
@@ -335,17 +372,28 @@ export class BinaryReader {
             throw new Error('Range error: readFloat64 out of bounds')
         }
         const currentOffset = this.offset
+        const u8 = this.floatU8
         if (this.endian === 'little') {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + i]
-            }
+            u8[0] = this.data[currentOffset]
+            u8[1] = this.data[currentOffset + 1]
+            u8[2] = this.data[currentOffset + 2]
+            u8[3] = this.data[currentOffset + 3]
+            u8[4] = this.data[currentOffset + 4]
+            u8[5] = this.data[currentOffset + 5]
+            u8[6] = this.data[currentOffset + 6]
+            u8[7] = this.data[currentOffset + 7]
         } else {
-            for (let i = 0; i < 8; i++) {
-                floatU8[i] = this.data[currentOffset + 7 - i]
-            }
+            u8[0] = this.data[currentOffset + 7]
+            u8[1] = this.data[currentOffset + 6]
+            u8[2] = this.data[currentOffset + 5]
+            u8[3] = this.data[currentOffset + 4]
+            u8[4] = this.data[currentOffset + 3]
+            u8[5] = this.data[currentOffset + 2]
+            u8[6] = this.data[currentOffset + 1]
+            u8[7] = this.data[currentOffset]
         }
         this.offset += 8
-        return floatF64[0]
+        return this.floatF64[0]
     }
 
     readArrayT(reader, length) {

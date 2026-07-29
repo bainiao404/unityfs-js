@@ -14,13 +14,13 @@ function hexToBytes(hex) {
 
 export function serializeAssetFile(assetFile) {
     const metadataWriter = new BinaryWriter(0, assetFile.endianness)
-    
+
     // 1. Write metadata fields (starting from unityVersion)
     if (assetFile.version >= 7) {
         metadataWriter.writeCString(assetFile.unityVersion)
     }
     if (assetFile.version >= 8) {
-        const platformID = Object.keys(BuildTarget).find(key => BuildTarget[key] === assetFile.targetPlatform) || 0
+        const platformID = Object.keys(BuildTarget).find((key) => BuildTarget[key] === assetFile.targetPlatform) || 0
         metadataWriter.writeUInt32(Number(platformID))
     }
     if (assetFile.version >= 13) {
@@ -39,7 +39,7 @@ export function serializeAssetFile(assetFile) {
         }
         if (assetFile.version >= 13) {
             if (
-                (typeRef.scriptTypeIndex >= 0) ||
+                typeRef.scriptTypeIndex >= 0 ||
                 (assetFile.version < 16 && typeRef.classID < 0) ||
                 (assetFile.version >= 16 && typeRef.classID === 114)
             ) {
@@ -162,7 +162,7 @@ export function serializeAssetFile(assetFile) {
             }
             if (assetFile.version >= 13) {
                 if (
-                    (typeRef.scriptTypeIndex >= 0) ||
+                    typeRef.scriptTypeIndex >= 0 ||
                     (assetFile.version < 16 && typeRef.classID < 0) ||
                     (assetFile.version >= 16 && typeRef.classID === 114)
                 ) {
@@ -196,7 +196,7 @@ export function serializeAssetFile(assetFile) {
 
     // Calculate sizes
     const metadataBytes = metadataWriter.getData()
-    
+
     let tempHeaderSize = 16
     if (assetFile.version >= 22) {
         tempHeaderSize = 48
@@ -205,7 +205,7 @@ export function serializeAssetFile(assetFile) {
     }
 
     const dataOffset = tempHeaderSize + metadataBytes.length
-    
+
     const alignMod = dataOffset % 16
     const headerPaddingSize = alignMod !== 0 ? 16 - alignMod : 0
     const finalDataOffset = dataOffset + headerPaddingSize
@@ -218,7 +218,7 @@ export function serializeAssetFile(assetFile) {
         headerWriter.writeUInt32(assetFile.version)
         headerWriter.writeUInt32(0)
         headerWriter.writeUInt32(assetFile.endianness === 'little' ? 0 : 1)
-        
+
         headerWriter.writeUInt32(metadataBytes.length)
         headerWriter.writeUInt64(BigInt(finalFileSize))
         headerWriter.writeUInt64(BigInt(finalDataOffset))

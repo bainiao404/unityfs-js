@@ -15,11 +15,7 @@ export async function processMesh(objectInfo, options = {}) {
     const faceCount = mesh.indices ? (mesh.indices.length / 3) | 0 : 0
 
     const totalLines =
-        2 +
-        (vertCount ? vertCount + 1 : 0) +
-        (uvCount ? uvCount + 1 : 0) +
-        (normCount ? normCount + 1 : 0) +
-        faceCount
+        2 + (vertCount ? vertCount + 1 : 0) + (uvCount ? uvCount + 1 : 0) + (normCount ? normCount + 1 : 0) + faceCount
 
     const lines = new Array(totalLines)
     let lineIdx = 0
@@ -88,4 +84,3 @@ export async function processMesh(objectInfo, options = {}) {
         },
     }
 }
-

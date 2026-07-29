@@ -497,7 +497,13 @@ export class SerializedSubProgram {
 }
 
 export class SerializedProgram {
-    static exposedAttributes = ['subPrograms', 'playerSubPrograms', 'parameterBlobIndices', 'commonParameters', 'serializedKeywordStateMask']
+    static exposedAttributes = [
+        'subPrograms',
+        'playerSubPrograms',
+        'parameterBlobIndices',
+        'commonParameters',
+        'serializedKeywordStateMask',
+    ]
 
     constructor(reader) {
         const version = reader.version
@@ -584,7 +590,7 @@ function checkHasEditorData(reader) {
         reader.seek(numEditorDataHashes * 16, SEEK_CUR)
         reader.align(4)
         const platformsLen = reader.readUInt32()
-        if (platformsLen > (reader.size - reader.tell())) {
+        if (platformsLen > reader.size - reader.tell()) {
             return false
         }
         return true

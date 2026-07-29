@@ -38,134 +38,143 @@
 
 */
 
-'use strict';
+'use strict'
 
 /******************************************************************************/
+;(function (context) {
+    // >>>> Start of private namespace
 
-(function(context) {                    // >>>> Start of private namespace
+    /******************************************************************************/
 
-/******************************************************************************/
+    let wd = (function () {
+        let url = document.currentScript.src
+        let match = /[^\/]+$/.exec(url)
+        return match !== null ? url.slice(0, match.index) : ''
+    })()
 
-let wd = (function() {
-    let url = document.currentScript.src;
-    let match = /[^\/]+$/.exec(url);
-    return match !== null ?
-        url.slice(0, match.index) :
-        '';
-})();
-
-let removeScript = function(script) {
-    if ( !script ) { return; }
-    if ( script.parentNode === null ) { return; }
-    script.parentNode.removeChild(script);
-};
-
-let createInstanceWASM = function() {
-    if ( context.LZ4BlockWASM instanceof Function ) {
-        let instance = new context.LZ4BlockWASM();
-        return instance.init().then(( ) => { return instance; });
-    }
-    if ( context.LZ4BlockWASM === null ) {
-        return Promise.resolve(null);
-    }
-    return new Promise((resolve, reject) => {
-        let script = document.createElement('script');
-        script.src = wd + 'lz4-block-codec-wasm.js';
-        script.addEventListener('load', ( ) => {
-            if ( context.LZ4BlockWASM instanceof Function === false ) {
-                context.LZ4BlockWASM = null;
-                context.LZ4BlockWASM = undefined;
-                resolve(null);
-            } else {
-                let instance = new context.LZ4BlockWASM();
-                instance.init()
-                    .then(( ) => {
-                        resolve(instance);
-                    })
-                    .catch(error => {
-                        reject(error);
-                    });
-            }
-        });
-        script.addEventListener('error', ( ) => {
-            context.LZ4BlockWASM = null;
-            resolve(null);
-        });
-        document.head.appendChild(script);
-        removeScript(script);
-    });
-};
-
-let createInstanceJS = function() {
-    if ( context.LZ4BlockJS instanceof Function ) {
-        let instance = new context.LZ4BlockJS();
-        return instance.init().then(( ) => { return instance; });
-    }
-    if ( context.LZ4BlockJS === null ) {
-        return Promise.resolve(null);
-    }
-    return new Promise((resolve, reject) => {
-        let script = document.createElement('script');
-        script.src = wd + 'lz4-block-codec-js.js';
-        script.addEventListener('load', ( ) => {
-            if ( context.LZ4BlockJS instanceof Function === false ) {
-                context.LZ4BlockJS = null;
-                resolve(null);
-            } else {
-                let instance = new context.LZ4BlockJS();
-                instance.init()
-                    .then(( ) => {
-                        resolve(instance);
-                    })
-                    .catch(error => {
-                        reject(error);
-                    });
-            }
-        });
-        script.addEventListener('error', ( ) => {
-            context.LZ4BlockJS = null;
-            resolve(null);
-        });
-        document.head.appendChild(script);
-        removeScript(script);
-    });
-};
-
-/******************************************************************************/
-
-context.lz4BlockCodec = {
-    createInstance: function(flavor) {
-        let instantiator;
-        if ( flavor === 'wasm' ) {
-            instantiator = createInstanceWASM;
-        } else if ( flavor === 'js' ) {
-            instantiator = createInstanceJS;
-        } else {
-            instantiator = createInstanceWASM || createInstanceJS;
+    let removeScript = function (script) {
+        if (!script) {
+            return
         }
-        return (instantiator)()
-            .then(instance => {
-                if ( instance ) { return instance; }
-                if ( flavor === undefined ) {
-                    return createInstanceJS();
-                }
-                return null;
-            })
-            .catch(( ) => {
-                if ( flavor === undefined ) {
-                    return createInstanceJS();
-                }
-                return null;
-            });
-    },
-    reset: function() {
-        context.LZ4BlockWASM = undefined;
-        context.LZ4BlockJS = undefined;
+        if (script.parentNode === null) {
+            return
+        }
+        script.parentNode.removeChild(script)
     }
-};
 
-/******************************************************************************/
+    let createInstanceWASM = function () {
+        if (context.LZ4BlockWASM instanceof Function) {
+            let instance = new context.LZ4BlockWASM()
+            return instance.init().then(() => {
+                return instance
+            })
+        }
+        if (context.LZ4BlockWASM === null) {
+            return Promise.resolve(null)
+        }
+        return new Promise((resolve, reject) => {
+            let script = document.createElement('script')
+            script.src = wd + 'lz4-block-codec-wasm.js'
+            script.addEventListener('load', () => {
+                if (context.LZ4BlockWASM instanceof Function === false) {
+                    context.LZ4BlockWASM = null
+                    context.LZ4BlockWASM = undefined
+                    resolve(null)
+                } else {
+                    let instance = new context.LZ4BlockWASM()
+                    instance
+                        .init()
+                        .then(() => {
+                            resolve(instance)
+                        })
+                        .catch((error) => {
+                            reject(error)
+                        })
+                }
+            })
+            script.addEventListener('error', () => {
+                context.LZ4BlockWASM = null
+                resolve(null)
+            })
+            document.head.appendChild(script)
+            removeScript(script)
+        })
+    }
 
-})(this || self);                       // <<<< End of private namespace
+    let createInstanceJS = function () {
+        if (context.LZ4BlockJS instanceof Function) {
+            let instance = new context.LZ4BlockJS()
+            return instance.init().then(() => {
+                return instance
+            })
+        }
+        if (context.LZ4BlockJS === null) {
+            return Promise.resolve(null)
+        }
+        return new Promise((resolve, reject) => {
+            let script = document.createElement('script')
+            script.src = wd + 'lz4-block-codec-js.js'
+            script.addEventListener('load', () => {
+                if (context.LZ4BlockJS instanceof Function === false) {
+                    context.LZ4BlockJS = null
+                    resolve(null)
+                } else {
+                    let instance = new context.LZ4BlockJS()
+                    instance
+                        .init()
+                        .then(() => {
+                            resolve(instance)
+                        })
+                        .catch((error) => {
+                            reject(error)
+                        })
+                }
+            })
+            script.addEventListener('error', () => {
+                context.LZ4BlockJS = null
+                resolve(null)
+            })
+            document.head.appendChild(script)
+            removeScript(script)
+        })
+    }
+
+    /******************************************************************************/
+
+    context.lz4BlockCodec = {
+        createInstance: function (flavor) {
+            let instantiator
+            if (flavor === 'wasm') {
+                instantiator = createInstanceWASM
+            } else if (flavor === 'js') {
+                instantiator = createInstanceJS
+            } else {
+                instantiator = createInstanceWASM || createInstanceJS
+            }
+            return instantiator()
+                .then((instance) => {
+                    if (instance) {
+                        return instance
+                    }
+                    if (flavor === undefined) {
+                        return createInstanceJS()
+                    }
+                    return null
+                })
+                .catch(() => {
+                    if (flavor === undefined) {
+                        return createInstanceJS()
+                    }
+                    return null
+                })
+        },
+        reset: function () {
+            context.LZ4BlockWASM = undefined
+            context.LZ4BlockJS = undefined
+        },
+    }
+
+    /******************************************************************************/
+})(this || self) // <<<< End of private namespace
 
 /******************************************************************************/

@@ -38,26 +38,28 @@ function growLz4MemoryTo(instance, byteLength) {
     return exports.memory.buffer
 }
 
-export const lz4BlockWASM = lz4Instance ? {
-    decodeBlock(input, inputOffset, outputSize) {
-        if (input instanceof ArrayBuffer) {
-            input = new Uint8Array(input)
-        }
-        const inputSize = input.byteLength
-        const exports = lz4Instance.exports
-        const mem0 = exports.getLinearMemoryOffset()
-        const memBuffer = growLz4MemoryTo(lz4Instance, inputSize + outputSize)
-        
-        const inputArea = new Uint8Array(memBuffer, mem0, inputSize)
-        inputArea.set(input)
-        
-        const decodedSize = exports.lz4BlockDecode(mem0 + inputOffset, inputSize - inputOffset, mem0 + inputSize)
-        if (decodedSize === 0) {
-            return null
-        }
-        return new Uint8Array(memBuffer, mem0 + inputSize, decodedSize)
-    }
-} : null
+export const lz4BlockWASM = lz4Instance
+    ? {
+          decodeBlock(input, inputOffset, outputSize) {
+              if (input instanceof ArrayBuffer) {
+                  input = new Uint8Array(input)
+              }
+              const inputSize = input.byteLength
+              const exports = lz4Instance.exports
+              const mem0 = exports.getLinearMemoryOffset()
+              const memBuffer = growLz4MemoryTo(lz4Instance, inputSize + outputSize)
+
+              const inputArea = new Uint8Array(memBuffer, mem0, inputSize)
+              inputArea.set(input)
+
+              const decodedSize = exports.lz4BlockDecode(mem0 + inputOffset, inputSize - inputOffset, mem0 + inputSize)
+              if (decodedSize === 0) {
+                  return null
+              }
+              return new Uint8Array(memBuffer, mem0 + inputSize, decodedSize)
+          },
+      }
+    : null
 
 // 2. Initialize LZMA WASM
 let lzmaInstance = null
@@ -81,23 +83,25 @@ function growLzmaMemoryTo(instance, byteLength) {
     return exports.memory.buffer
 }
 
-export const lzmaBlockWASM = lzmaInstance ? {
-    decodeBlock(input, outputSize) {
-        if (input instanceof ArrayBuffer) {
-            input = new Uint8Array(input)
-        }
-        const inputSize = input.byteLength
-        const exports = lzmaInstance.exports
-        const mem0 = exports.getLinearMemoryOffset()
-        const memBuffer = growLzmaMemoryTo(lzmaInstance, inputSize + outputSize)
-        
-        const inputArea = new Uint8Array(memBuffer, mem0, inputSize)
-        inputArea.set(input)
-        
-        const decodedSize = exports.lzmaBlockDecode(mem0, inputSize, mem0 + inputSize, outputSize)
-        if (decodedSize === 0) {
-            return null
-        }
-        return new Uint8Array(memBuffer, mem0 + inputSize, decodedSize)
-    }
-} : null
+export const lzmaBlockWASM = lzmaInstance
+    ? {
+          decodeBlock(input, outputSize) {
+              if (input instanceof ArrayBuffer) {
+                  input = new Uint8Array(input)
+              }
+              const inputSize = input.byteLength
+              const exports = lzmaInstance.exports
+              const mem0 = exports.getLinearMemoryOffset()
+              const memBuffer = growLzmaMemoryTo(lzmaInstance, inputSize + outputSize)
+
+              const inputArea = new Uint8Array(memBuffer, mem0, inputSize)
+              inputArea.set(input)
+
+              const decodedSize = exports.lzmaBlockDecode(mem0, inputSize, mem0 + inputSize, outputSize)
+              if (decodedSize === 0) {
+                  return null
+              }
+              return new Uint8Array(memBuffer, mem0 + inputSize, decodedSize)
+          },
+      }
+    : null

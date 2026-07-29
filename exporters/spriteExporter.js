@@ -1,32 +1,50 @@
-﻿import { cropImage, expandImage } from '../unityfs/imageProcessing.js'
+import { cropImage, expandImage } from '../unityfs/imageProcessing.js'
 import { rgbaToPng } from '../unityfs/classes/texture2d.js'
 import { BinaryReader } from '../core/binaryStream.js'
 
 // Helper to check if a point is inside a triangle (Barycentric coordinate method)
 function pointInTriangle(px, py, a, b, c) {
-    const v0x = c[0] - a[0], v0y = c[1] - a[1];
-    const v1x = b[0] - a[0], v1y = b[1] - a[1];
-    const v2x = px - a[0], v2y = py - a[1];
+    const v0x = c[0] - a[0],
+        v0y = c[1] - a[1]
+    const v1x = b[0] - a[0],
+        v1y = b[1] - a[1]
+    const v2x = px - a[0],
+        v2y = py - a[1]
 
-    const dot00 = v0x * v0x + v0y * v0y;
-    const dot01 = v0x * v1x + v0y * v1y;
-    const dot02 = v0x * v2x + v0y * v2y;
-    const dot11 = v1x * v1x + v1y * v1y;
-    const dot12 = v1x * v2x + v1y * v2y;
+    const dot00 = v0x * v0x + v0y * v0y
+    const dot01 = v0x * v1x + v0y * v1y
+    const dot02 = v0x * v2x + v0y * v2y
+    const dot11 = v1x * v1x + v1y * v1y
+    const dot12 = v1x * v2x + v1y * v2y
 
-    const invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
-    if (!isFinite(invDenom)) return false;
+    const invDenom = 1 / (dot00 * dot11 - dot01 * dot01)
+    if (!isFinite(invDenom)) return false
 
-    const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
-    const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+    const u = (dot11 * dot02 - dot01 * dot12) * invDenom
+    const v = (dot00 * dot12 - dot01 * dot02) * invDenom
 
-    return (u >= 0) && (v >= 0) && (u + v <= 1.00001);
+    return u >= 0 && v >= 0 && u + v <= 1.00001
+}
+
+// Helper to check if a point is inside a triangle using precomputed barycentric coefficients
+function pointInTrianglePrecomputed(px, py, pre) {
+    const v2x = px - pre.a[0]
+    const v2y = py - pre.a[1]
+
+    const dot02 = pre.v0x * v2x + pre.v0y * v2y
+    const dot12 = pre.v1x * v2x + pre.v1y * v2y
+
+    const u = (pre.dot11 * dot02 - pre.dot01 * dot12) * pre.invDenom
+    const v = (pre.dot00 * dot12 - pre.dot01 * dot02) * pre.invDenom
+
+    return u >= 0 && v >= 0 && u + v <= 1.00001
 }
 
 // Helper to extract mesh triangles from SpriteRenderData
 function getTriangles(rd, reader) {
-    if (rd.vertices && rd.vertices.length > 0) { // 5.6 down
-        const vertices = rd.vertices.map(v => v.pos)
+    if (rd.vertices && rd.vertices.length > 0) {
+        // 5.6 down
+        const vertices = rd.vertices.map((v) => v.pos)
         const triangleCount = Math.floor(rd.indexBuffer.length / 3)
         const triangles = []
         for (let i = 0; i < triangleCount; i++) {
@@ -36,7 +54,8 @@ function getTriangles(rd, reader) {
             triangles.push([vertices[first], vertices[second], vertices[third]])
         }
         return triangles
-    } else { // 5.6 and up
+    } else {
+        // 5.6 and up
         const triangles = []
         const vertexData = rd.vertexData
         if (!vertexData || !vertexData.channels || !vertexData.streams || !vertexData.data) {
@@ -207,23 +226,26 @@ export async function exportSprite(sprite, options = {}, manager) {
     if (!texture2d?.object) return null
 
     // 1. 获取裁剪区域 (并应用 downscaleMultiplier 进行缩放，解决 75% 等压缩贴图下的完全错位问题)
-    const ds = (spriteAtlasData.downscaleMultiplier && spriteAtlasData.downscaleMultiplier > 0) ? spriteAtlasData.downscaleMultiplier : 1.0
+    const ds =
+        spriteAtlasData.downscaleMultiplier && spriteAtlasData.downscaleMultiplier > 0
+            ? spriteAtlasData.downscaleMultiplier
+            : 1.0
 
     const textureRect = {
         x: spriteAtlasData.textureRect.x * ds,
         y: spriteAtlasData.textureRect.y * ds,
         width: spriteAtlasData.textureRect.width * ds,
-        height: spriteAtlasData.textureRect.height * ds
+        height: spriteAtlasData.textureRect.height * ds,
     }
     const textureRectOffset = {
         x: spriteAtlasData.textureRectOffset.x * ds,
-        y: spriteAtlasData.textureRectOffset.y * ds
+        y: spriteAtlasData.textureRectOffset.y * ds,
     }
     const spriteRect = {
         x: sprite.object.rect.x * ds,
         y: sprite.object.rect.y * ds,
         width: sprite.object.rect.width * ds,
-        height: sprite.object.rect.height * ds
+        height: sprite.object.rect.height * ds,
     }
 
     const rectX = Math.floor(textureRect.x)
@@ -237,7 +259,7 @@ export async function exportSprite(sprite, options = {}, manager) {
         x: Math.max(0, rectX),
         y: Math.max(0, rectY),
         width: Math.min(rectRight, texWidth) - Math.max(0, rectX),
-        height: Math.min(rectBottom, texHeight) - Math.max(0, rectY)
+        height: Math.min(rectBottom, texHeight) - Math.max(0, rectY),
     }
 
     // 2. 解码并裁剪图像
@@ -264,33 +286,106 @@ export async function exportSprite(sprite, options = {}, manager) {
             const scale = sprite.object.pixelsToUnits * ds
             const pivotX = sprite.object.pivot ? sprite.object.pivot.x : 0.5
             const pivotY = sprite.object.pivot ? sprite.object.pivot.y : 0.5
-            
+
             // 考虑 sub-pixel 亚像素偏移的精确变换公式 (基于缩放后的坐标空间)
             const tx = spriteRect.width * pivotX - textureRectOffset.x + (textureRect.x - rectX)
             const ty = spriteRect.height * pivotY - textureRectOffset.y + (textureRect.y - rectY)
-            
-            const transformedTriangles = triangles.map(t => {
-                return t.map(v => {
+
+            const transformedTriangles = triangles.map((t) => {
+                return t.map((v) => {
                     return [v.x * scale + tx, v.y * scale + ty]
                 })
             })
 
-            // 像素中心判定以提高精度
-            for (let y = 0; y < corpHeight; y++) {
-                const rowOffset = y * corpWidth * 4
-                for (let x = 0; x < corpWidth; x++) {
-                    let inside = false
-                    const px = x + 0.5
-                    const py = y + 0.5
-                    for (let i = 0; i < transformedTriangles.length; i++) {
-                        const t = transformedTriangles[i]
-                        if (pointInTriangle(px, py, t[0], t[1], t[2])) {
-                            inside = true
-                            break
+            // Calculate overall bounding box of all triangles
+            let minX = Infinity,
+                maxX = -Infinity,
+                minY = Infinity,
+                maxY = -Infinity
+            const precomputed = transformedTriangles.map((t) => {
+                const [a, b, c] = t
+                const tMinX = Math.min(a[0], b[0], c[0])
+                const tMaxX = Math.max(a[0], b[0], c[0])
+                const tMinY = Math.min(a[1], b[1], c[1])
+                const tMaxY = Math.max(a[1], b[1], c[1])
+
+                if (tMinX < minX) minX = tMinX
+                if (tMaxX > maxX) maxX = tMaxX
+                if (tMinY < minY) minY = tMinY
+                if (tMaxY > maxY) maxY = tMaxY
+
+                // Precompute pointInTriangle constants
+                const v0x = c[0] - a[0],
+                    v0y = c[1] - a[1]
+                const v1x = b[0] - a[0],
+                    v1y = b[1] - a[1]
+                const dot00 = v0x * v0x + v0y * v0y
+                const dot01 = v0x * v1x + v0y * v1y
+                const dot11 = v1x * v1x + v1y * v1y
+                const invDenom = 1 / (dot00 * dot11 - dot01 * dot01)
+
+                return {
+                    a,
+                    v0x,
+                    v0y,
+                    v1x,
+                    v1y,
+                    dot00,
+                    dot01,
+                    dot11,
+                    invDenom,
+                    minX: tMinX,
+                    maxX: tMaxX,
+                    minY: tMinY,
+                    maxY: tMaxY,
+                }
+            })
+
+            // Optimization 3: Check if tight mask is redundant (covers full rect with simple quad)
+            const isFullRect =
+                transformedTriangles.length <= 2 &&
+                minX <= 0.5 &&
+                minY <= 0.5 &&
+                maxX >= corpWidth - 0.5 &&
+                maxY >= corpHeight - 0.5
+
+            if (!isFullRect) {
+                // Optimization 1: Initialize mask to 0 (default transparent)
+                const mask = new Uint8Array(corpWidth * corpHeight)
+
+                // Loop over triangles and only mark pixels within their AABB
+                for (let i = 0; i < precomputed.length; i++) {
+                    const pre = precomputed[i]
+                    if (!isFinite(pre.invDenom)) continue
+
+                    // Clamp bounding box to crop rect coordinates
+                    const startX = Math.max(0, Math.floor(pre.minX))
+                    const endX = Math.min(corpWidth - 1, Math.ceil(pre.maxX))
+                    const startY = Math.max(0, Math.floor(pre.minY))
+                    const endY = Math.min(corpHeight - 1, Math.ceil(pre.maxY))
+
+                    for (let y = startY; y <= endY; y++) {
+                        const rowOffset = y * corpWidth
+                        for (let x = startX; x <= endX; x++) {
+                            const idx = rowOffset + x
+                            if (mask[idx] === 1) continue
+
+                            const px = x + 0.5
+                            const py = y + 0.5
+                            if (pointInTrianglePrecomputed(px, py, pre)) {
+                                mask[idx] = 1
+                            }
                         }
                     }
-                    if (!inside) {
-                        corpU38[rowOffset + x * 4 + 3] = 0 // Clear alpha channel
+                }
+
+                // Clear alpha channel of pixels that are outside all triangles
+                for (let y = 0; y < corpHeight; y++) {
+                    const rowOffset = y * corpWidth
+                    for (let x = 0; x < corpWidth; x++) {
+                        if (mask[rowOffset + x] === 0) {
+                            corpU38[(rowOffset + x) * 4 + 3] = 0 // Clear alpha channel
+                        }
                     }
                 }
             }
@@ -302,7 +397,7 @@ export async function exportSprite(sprite, options = {}, manager) {
         x: Math.floor(textureRectOffset.x - (textureRect.x - rectX)),
         y: Math.floor(textureRectOffset.y - (textureRect.y - rectY)),
         width: corpWidth,
-        height: corpHeight
+        height: corpHeight,
     }
 
     // 5. 根据 cutting 执行导出

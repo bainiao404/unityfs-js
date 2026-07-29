@@ -43,7 +43,6 @@
 'use strict'
 
 /******************************************************************************/
-
 ;(function (context) {
     // >>>> Start of private namespace
 

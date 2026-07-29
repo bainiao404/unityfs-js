@@ -136,7 +136,9 @@ async function runDemo() {
         }
     }
 
-    console.log(`\n[Demo] Export completed successfully! Total Mesh: ${meshCount}, SkinnedMeshRenderer: ${skinnedMeshCount}`)
+    console.log(
+        `\n[Demo] Export completed successfully! Total Mesh: ${meshCount}, SkinnedMeshRenderer: ${skinnedMeshCount}`,
+    )
 }
 
 runDemo().catch((err) => {

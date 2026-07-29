@@ -11,7 +11,9 @@ function getThree() {
 }
 
 function getGLTFExporter(THREE) {
-    const Exporter = ObjectRegistry.dependencies.GLTFExporter || (typeof window !== 'undefined' ? (window.GLTFExporter || (THREE ? THREE.GLTFExporter : null)) : null)
+    const Exporter =
+        ObjectRegistry.dependencies.GLTFExporter ||
+        (typeof window !== 'undefined' ? window.GLTFExporter || (THREE ? THREE.GLTFExporter : null) : null)
     if (!Exporter) {
         throw new Error('GLTFExporter is not configured in UnityJs dependencies.')
     }

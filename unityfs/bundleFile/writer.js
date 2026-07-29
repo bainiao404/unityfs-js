@@ -41,7 +41,7 @@ function serializeUnityFS(bundleFile) {
                 // Calculate original CAB CRC to use as fallback target CRC
                 const origCrc = file.data ? calculateCrc32(file.data) : 0
                 data = file.serialize()
-                
+
                 const targetCrc = bundleFile.targetCrc || origCrc
                 if (targetCrc && targetCrc > 0 && bundleFile.files.length === 1) {
                     try {
@@ -68,10 +68,10 @@ function serializeUnityFS(bundleFile) {
     const BLOCK_SIZE = 131072 // 128 KB
     const blocks = []
     const compressedBlocksWriter = new BinaryWriter(0)
-    
+
     const originalCompType = bundleFile.flags.compressionType
-    const useLZ4 = (originalCompType === CompressionType.LZ4 || originalCompType === CompressionType.LZ4HC)
-    
+    const useLZ4 = originalCompType === CompressionType.LZ4 || originalCompType === CompressionType.LZ4HC
+
     if (useLZ4) {
         const hashTab = makeHashTable()
         let processedSize = 0
@@ -79,25 +79,25 @@ function serializeUnityFS(bundleFile) {
             const blockSize = Math.min(BLOCK_SIZE, totalUncompressedSize - processedSize)
             const maxCompressedSize = compressBound(blockSize)
             const compBuf = new Uint8Array(maxCompressedSize)
-            
+
             // Clear hashtable
             for (let i = 0; i < hashTab.length; i++) hashTab[i] = 0
-            
+
             const compressedSize = compressBlock(uncompressedData, compBuf, processedSize, blockSize, hashTab)
-            
+
             if (compressedSize > 0 && compressedSize < blockSize) {
                 compressedBlocksWriter.write(compBuf.subarray(0, compressedSize))
                 blocks.push({
                     uncompressedSize: blockSize,
                     compressedSize: compressedSize,
-                    flags: 2 // CompressionType.LZ4
+                    flags: 2, // CompressionType.LZ4
                 })
             } else {
                 compressedBlocksWriter.write(uncompressedData.subarray(processedSize, processedSize + blockSize))
                 blocks.push({
                     uncompressedSize: blockSize,
                     compressedSize: blockSize,
-                    flags: 0 // CompressionType.None
+                    flags: 0, // CompressionType.None
                 })
             }
             processedSize += blockSize
@@ -106,21 +106,21 @@ function serializeUnityFS(bundleFile) {
         blocks.push({
             uncompressedSize: totalUncompressedSize,
             compressedSize: totalUncompressedSize,
-            flags: 0
+            flags: 0,
         })
         compressedBlocksWriter.write(uncompressedData)
     }
 
     const blockInfoWriter = new BinaryWriter(0)
     blockInfoWriter.write(new Uint8Array(16)) // 16 bytes hash/padding
-    
+
     blockInfoWriter.writeUInt32(blocks.length) // blockInfoCount
     for (let block of blocks) {
         blockInfoWriter.writeUInt32(block.uncompressedSize)
         blockInfoWriter.writeUInt32(block.compressedSize)
         blockInfoWriter.writeUInt16(block.flags)
     }
-    
+
     blockInfoWriter.writeUInt32(newNodes.length) // nodeCount
     for (let node of newNodes) {
         blockInfoWriter.writeUInt64(node.offset)
@@ -128,53 +128,58 @@ function serializeUnityFS(bundleFile) {
         blockInfoWriter.writeUInt32(node.flags)
         blockInfoWriter.writeCString(node.path)
     }
-    
+
     const blockInfoBytes = blockInfoWriter.getData()
 
     const headerWriter = new BinaryWriter(0)
     headerWriter.writeUInt64(BigInt(0)) // placeholder for size
     headerWriter.writeUInt32(blockInfoBytes.length) // compressedBlockInfoSize
     headerWriter.writeUInt32(blockInfoBytes.length) // uncompressedBlockInfoSize
-    
+
     let copyFlags = new BundleFlags(bundleFile.flags.encode())
     copyFlags.compressionType = CompressionType.None // Keep blockInfo uncompressed
     headerWriter.writeUInt32(copyFlags.encode())
-    
+
     if (bundleFile.version >= 7) {
-        const absoluteStart = 
-            bundleFile.magic.length + 1 + 
-            4 + 
-            bundleFile.unityVersion.length + 1 + 
-            bundleFile.unityRevision.length + 1;
-        const currentAbsolutePos = absoluteStart + headerWriter.offset;
-        const alignMod = currentAbsolutePos % 16;
-        const padding = alignMod !== 0 ? 16 - alignMod : 0;
+        const absoluteStart =
+            bundleFile.magic.length + 1 + 4 + bundleFile.unityVersion.length + 1 + bundleFile.unityRevision.length + 1
+        const currentAbsolutePos = absoluteStart + headerWriter.offset
+        const alignMod = currentAbsolutePos % 16
+        const padding = alignMod !== 0 ? 16 - alignMod : 0
         if (padding > 0) {
-            headerWriter.write(new Uint8Array(padding));
+            headerWriter.write(new Uint8Array(padding))
         }
     }
-    const headerBytes = headerWriter.getData();
+    const headerBytes = headerWriter.getData()
 
-    const absoluteStart = 
-        (bundleFile.magic.length + 1 + 4 + bundleFile.unityVersion.length + 1 + bundleFile.unityRevision.length + 1) + 
-        headerBytes.length + 
-        blockInfoBytes.length;
-    
-    let blockPadding = 0;
+    const absoluteStart =
+        bundleFile.magic.length +
+        1 +
+        4 +
+        bundleFile.unityVersion.length +
+        1 +
+        bundleFile.unityRevision.length +
+        1 +
+        headerBytes.length +
+        blockInfoBytes.length
+
+    let blockPadding = 0
     if (bundleFile.version >= 7 && (copyFlags.encode() & 0x200) !== 0) {
-        const alignMod = absoluteStart % 16;
-        blockPadding = alignMod !== 0 ? 16 - alignMod : 0;
+        const alignMod = absoluteStart % 16
+        blockPadding = alignMod !== 0 ? 16 - alignMod : 0
     }
 
-    const totalSize = absoluteStart + blockPadding + compressedBlocksWriter.offset;
-    
-    bundleFile.size = BigInt(totalSize);
+    const totalSize = absoluteStart + blockPadding + compressedBlocksWriter.offset
+
+    bundleFile.size = BigInt(totalSize)
 
     const sizeWriter = new BinaryWriter(8)
     sizeWriter.writeUInt64(BigInt(totalSize))
     headerBytes.set(sizeWriter.getData(), 0)
 
-    const finalWriter = new BinaryWriter(headerBytes.length + blockInfoBytes.length + blockPadding + compressedBlocksWriter.offset)
+    const finalWriter = new BinaryWriter(
+        headerBytes.length + blockInfoBytes.length + blockPadding + compressedBlocksWriter.offset,
+    )
     finalWriter.write(headerBytes)
     finalWriter.write(blockInfoBytes)
     if (blockPadding > 0) {
@@ -187,135 +192,135 @@ function serializeUnityFS(bundleFile) {
 // ==========================================
 // CRC-32 Math Helpers for Inner Checksum Spoofing
 // ==========================================
-const POLYNOMIAL_CRC = 0x104C11DB7n;
-const CRC32_TABLE = new Int32Array(256);
+const POLYNOMIAL_CRC = 0x104c11db7n
+const CRC32_TABLE = new Int32Array(256)
 for (let i = 0; i < 256; i++) {
-    let c = i;
+    let c = i
     for (let j = 0; j < 8; j++) {
-        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
     }
-    CRC32_TABLE[i] = c;
+    CRC32_TABLE[i] = c
 }
 
 function calculateCrc32(buffer) {
-    let crc = 0 ^ -1;
+    let crc = 0 ^ -1
     for (let i = 0; i < buffer.length; i++) {
-        crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ buffer[i]) & 0xFF];
+        crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ buffer[i]) & 0xff]
     }
-    return (crc ^ -1) >>> 0;
+    return (crc ^ -1) >>> 0
 }
 
 function getDegree(x) {
-    let deg = -1;
-    let temp = x;
+    let deg = -1
+    let temp = x
     while (temp > 0n) {
-        deg++;
-        temp >>= 1n;
+        deg++
+        temp >>= 1n
     }
-    return deg;
+    return deg
 }
 
 function reverse32(x) {
-    let y = 0n;
-    let temp = BigInt(x);
+    let y = 0n
+    let temp = BigInt(x)
     for (let i = 0; i < 32; i++) {
-        y = (y << 1n) | (temp & 1n);
-        temp >>= 1n;
+        y = (y << 1n) | (temp & 1n)
+        temp >>= 1n
     }
-    return Number(y);
+    return Number(y)
 }
 
 function multiplyMod(x, y) {
-    let z = 0n;
-    let tempX = x;
-    let tempY = y;
+    let z = 0n
+    let tempX = x
+    let tempY = y
     while (tempY > 0n) {
-        z ^= tempX * (tempY & 1n);
-        tempY >>= 1n;
-        tempX <<= 1n;
+        z ^= tempX * (tempY & 1n)
+        tempY >>= 1n
+        tempX <<= 1n
         if (((tempX >> 32n) & 1n) !== 0n) {
-            tempX ^= POLYNOMIAL_CRC;
+            tempX ^= POLYNOMIAL_CRC
         }
     }
-    return z;
+    return z
 }
 
 function powMod(x, y) {
-    let z = 1n;
-    let tempX = x;
-    let tempY = y;
+    let z = 1n
+    let tempX = x
+    let tempY = y
     while (tempY > 0n) {
         if ((tempY & 1n) !== 0n) {
-            z = multiplyMod(z, tempX);
+            z = multiplyMod(z, tempX)
         }
-        tempX = multiplyMod(tempX, tempX);
-        tempY >>= 1n;
+        tempX = multiplyMod(tempX, tempX)
+        tempY >>= 1n
     }
-    return z;
+    return z
 }
 
 function divideAndRemainder(x, y) {
-    if (y === 0n) throw new Error("Division by zero");
-    if (x === 0n) return [0n, 0n];
-    
-    let tempX = x;
-    const ydeg = getDegree(y);
-    let z = 0n;
+    if (y === 0n) throw new Error('Division by zero')
+    if (x === 0n) return [0n, 0n]
+
+    let tempX = x
+    const ydeg = getDegree(y)
+    let z = 0n
     for (let i = getDegree(tempX) - ydeg; i >= 0; i--) {
         if (((tempX >> BigInt(i + ydeg)) & 1n) !== 0n) {
-            tempX ^= y << BigInt(i);
-            z |= 1n << BigInt(i);
+            tempX ^= y << BigInt(i)
+            z |= 1n << BigInt(i)
         }
     }
-    return [z, tempX];
+    return [z, tempX]
 }
 
 function reciprocalMod(x) {
-    let y = x;
-    let tempX = POLYNOMIAL_CRC;
-    let a = 0n;
-    let b = 1n;
+    let y = x
+    let tempX = POLYNOMIAL_CRC
+    let a = 0n
+    let b = 1n
     while (y !== 0n) {
-        const [q, r] = divideAndRemainder(tempX, y);
-        const c = a ^ multiplyMod(q, b);
-        tempX = y;
-        y = r;
-        a = b;
-        b = c;
+        const [q, r] = divideAndRemainder(tempX, y)
+        const c = a ^ multiplyMod(q, b)
+        tempX = y
+        y = r
+        a = b
+        b = c
     }
     if (tempX === 1n) {
-        return a;
+        return a
     } else {
-        throw new Error("Reciprocal does not exist");
+        throw new Error('Reciprocal does not exist')
     }
 }
 
 function forceBufferCrc32(originalBuffer, targetCrc32) {
-    const extendedBuffer = new Uint8Array(originalBuffer.length + 4);
-    extendedBuffer.set(originalBuffer, 0);
-    
-    const currentCrcVal = calculateCrc32(extendedBuffer);
-    const crc = BigInt(reverse32(currentCrcVal));
-    const newcrc = BigInt(reverse32(targetCrc32));
-    
-    const delta = crc ^ newcrc;
-    const offset = originalBuffer.length;
-    const length = extendedBuffer.length;
-    
-    const power = BigInt(length - offset) * 8n;
-    const reciprocal = reciprocalMod(powMod(2n, power));
-    const finalDelta = multiplyMod(reciprocal, delta);
-    
-    const finalDeltaRev = reverse32(Number(finalDelta));
-    
+    const extendedBuffer = new Uint8Array(originalBuffer.length + 4)
+    extendedBuffer.set(originalBuffer, 0)
+
+    const currentCrcVal = calculateCrc32(extendedBuffer)
+    const crc = BigInt(reverse32(currentCrcVal))
+    const newcrc = BigInt(reverse32(targetCrc32))
+
+    const delta = crc ^ newcrc
+    const offset = originalBuffer.length
+    const length = extendedBuffer.length
+
+    const power = BigInt(length - offset) * 8n
+    const reciprocal = reciprocalMod(powMod(2n, power))
+    const finalDelta = multiplyMod(reciprocal, delta)
+
+    const finalDeltaRev = reverse32(Number(finalDelta))
+
     for (let i = 0; i < 4; i++) {
-        extendedBuffer[offset + i] ^= (finalDeltaRev >>> (i * 8)) & 0xFF;
+        extendedBuffer[offset + i] ^= (finalDeltaRev >>> (i * 8)) & 0xff
     }
-    
-    const verifiedCrc = calculateCrc32(extendedBuffer);
+
+    const verifiedCrc = calculateCrc32(extendedBuffer)
     if (verifiedCrc !== targetCrc32) {
-        console.error(`CRC Forcer Verification failed! Expected ${targetCrc32}, got ${verifiedCrc}`);
+        console.error(`CRC Forcer Verification failed! Expected ${targetCrc32}, got ${verifiedCrc}`)
     }
-    
-    return extendedBuffer;
+
+    return extendedBuffer
 }

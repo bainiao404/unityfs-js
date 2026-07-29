@@ -23,4 +23,3 @@ export class AnimatorOverrideController extends NamedObject {
         }
     }
 }
-

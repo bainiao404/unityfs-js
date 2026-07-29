@@ -12,9 +12,8 @@ export async function processTextAsset(objectInfo, options) {
     if (config.type === 'arrayBuffer') {
         dataR = objectInfo.object.data
     } else {
-        dataR = (objectInfo.object && typeof objectInfo.object.getExport === 'function')
-            ? objectInfo.object.getExport()
-            : ''
+        dataR =
+            objectInfo.object && typeof objectInfo.object.getExport === 'function' ? objectInfo.object.getExport() : ''
     }
 
     return { data: { raw: dataR } }

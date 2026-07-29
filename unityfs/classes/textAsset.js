@@ -55,7 +55,9 @@ export class TextAsset extends NamedObject {
         if (this.fields) {
             this.fields.m_Script = val
         } else {
-            console.warn('TypeTree not enabled for editing text on this TextAsset. Direct data modification not supported.')
+            console.warn(
+                'TypeTree not enabled for editing text on this TextAsset. Direct data modification not supported.',
+            )
         }
         this._text = val
         this.setDirty()
@@ -78,4 +80,3 @@ export class TextAsset extends NamedObject {
         return super.serialize()
     }
 }
-

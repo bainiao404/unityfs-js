@@ -192,12 +192,15 @@ const lzmaScript = document.createElement('script')
 lzmaScript.src = mainScriptDir + 'lzma-wasm/lzma-block-codec-any.js'
 lzmaScript.onload = () => {
     if (typeof lzmaBlockCodec !== 'undefined') {
-        lzmaBlockCodec.createInstance().then((instance) => {
-            window.lzmaBlockWASM = instance
-            console.log('[UnityJS-WASM] LZMA WASM decoder loaded successfully')
-        }).catch((err) => {
-            console.warn('[UnityJS-WASM] Failed to initialize LZMA WASM decoder:', err)
-        })
+        lzmaBlockCodec
+            .createInstance()
+            .then((instance) => {
+                window.lzmaBlockWASM = instance
+                console.log('[UnityJS-WASM] LZMA WASM decoder loaded successfully')
+            })
+            .catch((err) => {
+                console.warn('[UnityJS-WASM] Failed to initialize LZMA WASM decoder:', err)
+            })
     }
 }
 document.head.appendChild(lzmaScript)

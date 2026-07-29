@@ -23,7 +23,6 @@ function arrayBufferToDataURL(buffer, mimeType = 'application/octet-stream') {
     return `data:${mimeType};base64,${btoa(chunks.join(''))}`
 }
 
-
 /**
  * 解析并生成 AudioClip 声音数据的物理文件流
  */

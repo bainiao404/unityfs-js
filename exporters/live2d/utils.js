@@ -222,7 +222,8 @@ export function isAssetBelongsToModel(info, modelAssetFile, lowerModelName, mocD
         }
 
         if (containerPath) {
-            const lowerContainerPath = info._lowerContainerPath || (info._lowerContainerPath = containerPath.toLowerCase())
+            const lowerContainerPath =
+                info._lowerContainerPath || (info._lowerContainerPath = containerPath.toLowerCase())
             if (lowerContainerPath.includes(lowerModelName)) {
                 return true
             }

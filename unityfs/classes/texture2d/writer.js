@@ -24,7 +24,7 @@ export function updateTexture2DImage(texture, pngBytes) {
     if (texture.fields.m_StreamData) {
         texture.fields.m_StreamData.offset = BigInt(0)
         texture.fields.m_StreamData.size = 0
-        texture.fields.m_StreamData.path = ""
+        texture.fields.m_StreamData.path = ''
     }
 
     texture.cachedRaw = rgba

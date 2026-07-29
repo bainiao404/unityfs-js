@@ -56,13 +56,24 @@ function parseUnityFS(bundleFile) {
         let blockInfoCount = blockInfoReader.readUInt32()
         bundleFile.blockInfo = []
         for (let i = 0; i < blockInfoCount; i++) {
-            bundleFile.blockInfo.push(new StorageBlock(blockInfoReader.readUInt32(), blockInfoReader.readUInt32(), blockInfoReader.readUInt16()))
+            bundleFile.blockInfo.push(
+                new StorageBlock(
+                    blockInfoReader.readUInt32(),
+                    blockInfoReader.readUInt32(),
+                    blockInfoReader.readUInt16(),
+                ),
+            )
         }
         bundleFile.nodes = []
         let nodeCount = blockInfoReader.readUInt32()
         for (let i = 0; i < nodeCount; i++) {
             bundleFile.nodes.push(
-                new Node(blockInfoReader.readUInt64(), blockInfoReader.readUInt64(), blockInfoReader.readUInt32(), blockInfoReader.readCString()),
+                new Node(
+                    blockInfoReader.readUInt64(),
+                    blockInfoReader.readUInt64(),
+                    blockInfoReader.readUInt32(),
+                    blockInfoReader.readCString(),
+                ),
             )
         }
         if (bundleFile.flags && bundleFile.flags.blockInfoHasPadding) {
@@ -195,7 +206,11 @@ function parseUnityFS(bundleFile) {
     if (bundleFile.flags.compressionType === CompressionType.None) {
         data = blockInfoData
     } else {
-        data = DecoderManager.decompress(blockInfoData, bundleFile.uncompressedBlockInfoSize, bundleFile.flags.compressionType)
+        data = DecoderManager.decompress(
+            blockInfoData,
+            bundleFile.uncompressedBlockInfoSize,
+            bundleFile.flags.compressionType,
+        )
     }
 
     onDecompress(data)

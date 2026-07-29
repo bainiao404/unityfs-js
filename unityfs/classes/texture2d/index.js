@@ -1,9 +1,4 @@
-﻿export {
-    StreamingInfo,
-    GLTextureSettings,
-    TextureFormat,
-    Texture2D,
-} from './model.js'
+﻿export { StreamingInfo, GLTextureSettings, TextureFormat, Texture2D } from './model.js'
 
 export {
     decodeTexture2DRgba,
@@ -14,7 +9,4 @@ export {
     blobToDataURL,
 } from './reader.js'
 
-export {
-    updateTexture2DImage,
-    serializeTexture2D,
-} from './writer.js'
+export { updateTexture2DImage, serializeTexture2D } from './writer.js'

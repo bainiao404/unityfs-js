@@ -1,4 +1,4 @@
-﻿const utf16leDecoder = new TextDecoder('utf-16le')
+const utf16leDecoder = new TextDecoder('utf-16le')
 
 const typeHandlers = {
     bool: (reader) => reader.readBool(),

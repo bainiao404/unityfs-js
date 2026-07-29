@@ -15,7 +15,6 @@ import { convertToMotion3, buildCrcMap } from './live2d/motion.js'
 import { exportPhysicsSettings } from './live2d/physics.js'
 import { convertExpression } from './live2d/expression.js'
 
-
 export async function processLive2DModel(cubismModelObjInfo, manager) {
     const assetFile = cubismModelObjInfo.assetFile || manager.primaryAssetFile
     const modelData = assetFile.getObjectUsingTreeJSON(cubismModelObjInfo)

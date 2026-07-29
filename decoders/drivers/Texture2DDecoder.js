@@ -177,7 +177,6 @@ function decodeAlpha8(alpha8Data, baseColor = [255, 255, 255]) {
     return rgbaData
 }
 
-
 /**
  * Decode compressed texture format to straight RGBA Uint8Array
  * @param {Uint8Array} data

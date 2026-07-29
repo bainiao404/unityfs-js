@@ -92,16 +92,15 @@ function _request(url, options = {}) {
     // 降级使用 fetch API（支持 Node.js 18+ 或无 XMLHttpRequest 的运行环境）
     if (typeof fetch === 'function') {
         return fetch(url)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) {
                     throw new Error(`HTTP Error: ${res.status} ${res.statusText}`)
                 }
                 return res.arrayBuffer()
             })
-            .then(buffer => _parse(buffer, options))
-            .catch(err => Promise.reject(err.message || err))
+            .then((buffer) => _parse(buffer, options))
+            .catch((err) => Promise.reject(err.message || err))
     }
 
     return Promise.reject(new Error('No XMLHttpRequest or fetch implementation found in this environment.'))
 }
-

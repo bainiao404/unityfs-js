@@ -1,4 +1,4 @@
-﻿import UPNG from '../../../vendor/upng/UPNG.js'
+import UPNG from '../../../vendor/upng/UPNG.js'
 import { DecoderManager } from '../../../decoders/DecoderManager.js'
 
 // Pre-multiplied alpha pre-calculation table
@@ -12,7 +12,11 @@ export async function decodeTexture2DRgba(texture, worker = false, assetFile) {
     if (texture.streamData && (!texture.data || texture.data.length === 0)) {
         const context = texture.reader?.assetFile?.context || assetFile?.context || assetFile
         if (context && typeof context.resolveResource === 'function') {
-            texture.data = context.resolveResource(texture.streamData.path, texture.streamData.offset, texture.streamData.size)
+            texture.data = context.resolveResource(
+                texture.streamData.path,
+                texture.streamData.offset,
+                texture.streamData.size,
+            )
         } else if (assetFile && Array.isArray(assetFile.files)) {
             assetFile.files.forEach((f) => {
                 if (f.type == 3 && texture.streamData.path.includes(f.node.path)) {
@@ -65,7 +69,15 @@ export function flipImageVertical(imageData, width, height) {
 }
 
 export async function rgbaToPng(userConfig) {
-    const { rgbaData: rawRgbaData, width, height, type = 'arrayBuffer', premultiplied = false, upng = false, name } = userConfig
+    const {
+        rgbaData: rawRgbaData,
+        width,
+        height,
+        type = 'arrayBuffer',
+        premultiplied = false,
+        upng = false,
+        name,
+    } = userConfig
 
     const rgbaData = flipImageVertical(rawRgbaData, width, height)
 
@@ -133,6 +145,11 @@ export async function rgbaToPng(userConfig) {
             case 'blob':
                 rData.raw = new Blob([upngBuffer], { type: 'image/png' })
                 break
+            case 'blobURL': {
+                const blob = new Blob([upngBuffer], { type: 'image/png' })
+                rData.raw = URL.createObjectURL(blob)
+                break
+            }
             case 'dataURL': {
                 const blob = new Blob([upngBuffer], { type: 'image/png' })
                 rData.raw = await blobToDataURL(blob)

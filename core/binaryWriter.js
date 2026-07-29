@@ -1,6 +1,4 @@
-﻿
-
-export const SEEK_SET = 0
+﻿export const SEEK_SET = 0
 export const SEEK_CUR = 1
 export const SEEK_END = 2
 
