@@ -1,4 +1,4 @@
-# unityfs-js (Version 0.2.1)
+# unityfs-js (Version 0.2.3)
 
 一个高性能、轻量级的纯 JavaScript 前端 Unity 资源解包与提取库。本库经过重构，移除了工程打包依赖，支持在浏览器和 Node.js 命令行环境（CLI）中无缝运行。
 
