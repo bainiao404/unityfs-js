@@ -46,8 +46,17 @@ function wasmOutputToUint8Array(output) {
     try {
         const len = output.length;
         const result = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            result[i] = output[i];
+        for (let i = 0; i < len; i += 4) {
+            if (i + 3 < len) {
+                result[i] = output[i + 2];     // Red (WASM Blue at i+2)
+                result[i + 1] = output[i + 1]; // Green
+                result[i + 2] = output[i];     // Blue (WASM Red at i)
+                result[i + 3] = output[i + 3]; // Alpha
+            } else {
+                for (let j = i; j < len; j++) {
+                    result[j] = output[j];
+                }
+            }
         }
         return result;
     } catch (e) {
