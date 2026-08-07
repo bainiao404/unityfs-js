@@ -446,6 +446,7 @@ node exportMeshDemo.js <资源包路径或文件夹>
 - [Unity-Technologies/crunch](https://github.com/Unity-Technologies/crunch/tree/unity)
 - [aelurum/AssetStudio](https://github.com/aelurum/AssetStudio) (C# 资源查看器原型参考)
 - [bc7-decoder](https://github.com/Alexander-Holm/bc7-decoder) (BC7 图像解码器)
+- [texture2ddecoder-wasm](https://github.com/bjornharrtell/texture2ddecoder-wasm) (多格式 WebAssembly 纹理解码器)
 - [ashduino101/WebAssetStudio](https://github.com/ashduino101) (JavaScript 核心解析原型参考)
 - [mikalv/python-fsb5](https://github.com/mikalv/python-fsb5) (FSB5 音频提取与重建逻辑参考)
 - [Vorbis I Specification](https://xiph.org/vorbis/doc/Vorbis_I_spec.html) (Vorbis 比特流与 Codebook 校验规范)

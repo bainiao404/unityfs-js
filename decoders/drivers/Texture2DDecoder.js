@@ -1,8 +1,7 @@
-﻿import { decode } from './decodeDxt.js'
 import { DXTDecoder } from './decodeDxtWorker.js'
 import initCRN from '../../vendor/crunchjs/crunch.js'
 import initUnityCRN from '../../vendor/crunchjs/unityCrunch.js'
-import decodeBC7 from '../../vendor/bc7-decoder/index.js'
+import * as texture2dDec from '../../wasm/texture2ddecoder-wasm/texture2ddecoder-any.js'
 
 let DXTDecoderWorker = null
 function getDXTDecoder() {
@@ -201,9 +200,13 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
         case 'dxt4':
         case 'dxt5':
             if (worker) {
-                imageData = await getDXTDecoder().decode(u8Data.slice(), width, height, textureFormat)
+                if (options.dxtDecoder === 'wasm' || !options.dxtDecoder) {
+                    imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
+                } else {
+                    imageData = await getDXTDecoder().decode(u8Data.slice(), width, height, textureFormat)
+                }
             } else {
-                imageData = decode(u8Data, width, height, textureFormat)
+                imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
             }
             break
         case 'rgb24':
@@ -227,24 +230,69 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
             } else {
                 dxtData = await decompressCRN(u8Data)
             }
+            const baseFormat = textureFormat.replace('crunched', '').toLowerCase()
             if (worker) {
-                imageData = await getDXTDecoder().decode(
-                    dxtData.buffer,
-                    width,
-                    height,
-                    textureFormat.replace('crunched', ''),
-                )
+                if (options.dxtDecoder === 'wasm' || !options.dxtDecoder) {
+                    imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
+                } else {
+                    imageData = await getDXTDecoder().decode(
+                        dxtData.buffer,
+                        width,
+                        height,
+                        baseFormat,
+                    )
+                }
             } else {
-                imageData = decode(dxtData, width, height, textureFormat.replace('crunched', ''))
+                imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
             }
             break
         }
         case 'bc7':
-            imageData = decodeBC7(u8Data.slice().buffer, width, height)
+            imageData = await texture2dDec.decodeBc7(u8Data, width, height, options)
             break
         case 'alpha8':
             imageData = decodeAlpha8(u8Data)
             break
+        case 'etc_rgb4':
+            imageData = await texture2dDec.decodeEtc1(u8Data, width, height, options)
+            break
+        case 'etc2_rgb':
+            imageData = await texture2dDec.decodeEtc2(u8Data, width, height, options)
+            break
+        case 'etc2_rgba1':
+            imageData = await texture2dDec.decodeEtc2a1(u8Data, width, height, options)
+            break
+        case 'etc2_rgba8':
+            imageData = await texture2dDec.decodeEtc2a8(u8Data, width, height, options)
+            break
+        case 'eac_r':
+            imageData = await texture2dDec.decodeEacr(u8Data, width, height, options)
+            break
+        case 'eac_r_signed':
+            imageData = await texture2dDec.decodeEacrSigned(u8Data, width, height, options)
+            break
+        case 'eac_rg':
+            imageData = await texture2dDec.decodeEacrg(u8Data, width, height, options)
+            break
+        case 'eac_rg_signed':
+            imageData = await texture2dDec.decodeEacrgSigned(u8Data, width, height, options)
+            break
+        case 'etc_rgb4crunched':
+        case 'etc2_rgba8crunched': {
+            let etcData = u8Data
+            if (version[0] > 2017 || (version[0] === 2017 && version[1] >= 3)) {
+                etcData = await decompressUnityCRN(u8Data, 0)
+            } else {
+                etcData = await decompressCRN(u8Data)
+            }
+            const baseFormat = format.replace('crunched', '')
+            if (baseFormat === 'etc_rgb4') {
+                imageData = await texture2dDec.decodeEtc1(etcData, width, height, options)
+            } else {
+                imageData = await texture2dDec.decodeEtc2a8(etcData, width, height, options)
+            }
+            break
+        }
         default:
             throw new Error(`Unsupported texture format decoder: ${textureFormat}`)
     }

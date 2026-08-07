@@ -1,4 +1,4 @@
-﻿import { lz4DecompressDriver } from './drivers/LZ4Driver.js'
+import { lz4DecompressDriver } from './drivers/LZ4Driver.js'
 import { lzmaDecompressDriver } from './drivers/LZMADriver.js'
 import { decodeTexture2D } from './drivers/Texture2DDecoder.js'
 import { decodeAudioFSB5 } from './drivers/AudioFSB5Decoder.js'
@@ -64,6 +64,16 @@ const supportedFormats = [
     'argb4444',
     'bc7',
     'alpha8',
+    'etc_rgb4',
+    'etc2_rgb',
+    'etc2_rgba1',
+    'etc2_rgba8',
+    'etc2_rgba8crunched',
+    'etc_rgb4crunched',
+    'eac_r',
+    'eac_r_signed',
+    'eac_rg',
+    'eac_rg_signed',
 ]
 for (const fmt of supportedFormats) {
     DecoderManager.registerTextureDecoder(fmt, (data, width, height, options) => {
