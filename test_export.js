@@ -25,11 +25,10 @@ async function exportWithDecoder(decoderType, outputDir) {
         const className = info.getClassName();
         if (className === 'Texture2D') {
             try {
-                // Pass the etcDecoder and dxtDecoder type (wasm or js) in the export options
+                // Pass the decoder type (wasm or js) in the export options
                 const fileInfo = await manager.exportFile(info, { 
                     type: 'arrayBuffer', 
-                    etcDecoder: decoderType,
-                    dxtDecoder: decoderType
+                    decoder: decoderType
                 });
                 
                 if (fileInfo && fileInfo.data && fileInfo.data.raw) {

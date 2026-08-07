@@ -4,7 +4,7 @@ import { decode as jsDecodeDxt } from '../../decoders/drivers/decodeDxt.js';
 import decodeBC7 from '../../vendor/bc7-decoder/index.js';
 
 export async function decodeEtc1(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_etc1(data, width, height);
         } catch (e) {
@@ -15,7 +15,7 @@ export async function decodeEtc1(data, width, height, options = {}) {
 }
 
 export async function decodeEtc2(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_etc2(data, width, height);
         } catch (e) {
@@ -26,7 +26,7 @@ export async function decodeEtc2(data, width, height, options = {}) {
 }
 
 export async function decodeEtc2a1(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_etc2a1(data, width, height);
         } catch (e) {
@@ -37,7 +37,7 @@ export async function decodeEtc2a1(data, width, height, options = {}) {
 }
 
 export async function decodeEtc2a8(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_etc2a8(data, width, height);
         } catch (e) {
@@ -48,7 +48,7 @@ export async function decodeEtc2a8(data, width, height, options = {}) {
 }
 
 export async function decodeEacr(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_eacr(data, width, height);
         } catch (e) {
@@ -59,7 +59,7 @@ export async function decodeEacr(data, width, height, options = {}) {
 }
 
 export async function decodeEacrSigned(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_eacr_signed(data, width, height);
         } catch (e) {
@@ -70,7 +70,7 @@ export async function decodeEacrSigned(data, width, height, options = {}) {
 }
 
 export async function decodeEacrg(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_eacrg(data, width, height);
         } catch (e) {
@@ -81,7 +81,7 @@ export async function decodeEacrg(data, width, height, options = {}) {
 }
 
 export async function decodeEacrgSigned(data, width, height, options = {}) {
-    if (options.etcDecoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_eacrg_signed(data, width, height);
         } catch (e) {
@@ -93,7 +93,7 @@ export async function decodeEacrgSigned(data, width, height, options = {}) {
 
 export async function decodeDxt(data, width, height, dxtFormat, options = {}) {
     const fmt = dxtFormat.toLowerCase();
-    if (options.dxtDecoder !== 'js' && (fmt === 'dxt1' || fmt === 'dxt5')) {
+    if (options.decoder !== 'js' && (fmt === 'dxt1' || fmt === 'dxt5')) {
         try {
             if (fmt === 'dxt1') {
                 return await wasmDec.decode_bc1(data, width, height);
@@ -108,7 +108,7 @@ export async function decodeDxt(data, width, height, dxtFormat, options = {}) {
 }
 
 export async function decodeBc7(data, width, height, options = {}) {
-    if (options.bc7Decoder !== 'js') {
+    if (options.decoder !== 'js') {
         try {
             return await wasmDec.decode_bc7(data, width, height);
         } catch (e) {

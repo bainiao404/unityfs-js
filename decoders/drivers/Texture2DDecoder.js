@@ -200,7 +200,7 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
         case 'dxt4':
         case 'dxt5':
             if (worker) {
-                if (options.dxtDecoder === 'wasm' || !options.dxtDecoder) {
+                if (options.decoder === 'wasm' || !options.decoder) {
                     imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
                 } else {
                     imageData = await getDXTDecoder().decode(u8Data.slice(), width, height, textureFormat)
@@ -232,7 +232,7 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
             }
             const baseFormat = textureFormat.replace('crunched', '').toLowerCase()
             if (worker) {
-                if (options.dxtDecoder === 'wasm' || !options.dxtDecoder) {
+                if (options.decoder === 'wasm' || !options.decoder) {
                     imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
                 } else {
                     imageData = await getDXTDecoder().decode(
