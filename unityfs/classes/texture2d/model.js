@@ -1,4 +1,4 @@
-﻿import { Texture } from '../texture.js'
+import { Texture } from '../texture.js'
 import { parseTypeTreeDirect } from '../../typeTree/index.js'
 import { decodeTexture2DRgba, rgbaToPng } from './reader.js'
 import { updateTexture2DImage, serializeTexture2D } from './writer.js'
@@ -331,8 +331,8 @@ export class Texture2D extends Texture {
         updateTexture2DImage(this, pngBytes)
     }
 
-    async decodeRgba(worker = false, assetFile) {
-        return decodeTexture2DRgba(this, worker, assetFile)
+    async decodeRgba(worker = false, assetFile, options = {}) {
+        return decodeTexture2DRgba(this, worker, assetFile, options)
     }
 
     async createImg(userConfig, assetFile) {
@@ -340,7 +340,7 @@ export class Texture2D extends Texture {
             ...{ type: 'arrayBuffer', fileType: 'png', worker: false },
             ...userConfig,
         }
-        let rgba = await this.decodeRgba(worker, assetFile)
+        let rgba = await this.decodeRgba(worker, assetFile, userConfig)
         if (!rgba) {
             throw new Error(`Failed to decode Texture2D RGBA data for ${this.name}`)
         }

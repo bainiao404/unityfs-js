@@ -84,6 +84,9 @@ async function run() {
                     matchCount++;
                 } else {
                     mismatchCount++;
+                    if (mismatchCount <= 5) {
+                        console.log(`Mismatch [${mismatchCount}]: ${file}. WASM size: ${wasmBuf.length}, JS size: ${jsBuf.length}`);
+                    }
                 }
             }
         }
