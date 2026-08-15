@@ -1,4 +1,5 @@
 import UPNG from '../../../vendor/upng/UPNG.js'
+import { pngEncoderWASM } from '../../../wasm/wasmDecoders.js'
 import { DecoderManager } from '../../../decoders/DecoderManager.js'
 
 // Pre-multiplied alpha pre-calculation table
@@ -76,7 +77,7 @@ export async function rgbaToPng(userConfig) {
         height,
         type = 'arrayBuffer',
         premultiplied = false,
-        upng = false,
+        encoder = 'auto', // 'auto' | 'wasm' | 'canvas' | 'upng'
         name,
     } = userConfig
 
@@ -89,14 +90,57 @@ export async function rgbaToPng(userConfig) {
         return rData
     }
 
-    const useCanvas = !upng && typeof window !== 'undefined' && !!window.OffscreenCanvas
-
     let processedData = rgbaData
-    if (premultiplied || (useCanvas && isPremultipliedAlpha(rgbaData))) {
+    if (premultiplied) {
         processedData = ensureStraightAlpha(rgbaData)
     }
 
-    if (useCanvas) {
+    // 1. WASM 方案：当 encoder 为 'auto' 或 'wasm'，且不是请求原生 Canvas DOM 对象时使用
+    const isCanvasType = type === 'canvas' || type === 'offscreenCanvas'
+    let pngBytes = null
+    if ((encoder === 'auto' || encoder === 'wasm') && !isCanvasType) {
+        const wasmInstance = (typeof window !== 'undefined' && window.pngEncoderWASM) || pngEncoderWASM
+        if (wasmInstance) {
+            try {
+                pngBytes = wasmInstance.encode(processedData, width, height)
+            } catch (err) {
+                console.warn('[unityfs-js] WASM PNG encode failed, falling back to Canvas/UPNG:', err)
+                pngBytes = null
+            }
+        }
+    }
+
+    // 若 WASM 编码成功，直接组装返回结果
+    if (pngBytes) {
+        switch (type) {
+            case 'arrayBuffer':
+                rData.raw = pngBytes.buffer.slice(pngBytes.byteOffset, pngBytes.byteOffset + pngBytes.byteLength)
+                break
+            case 'blob':
+                rData.raw = new Blob([pngBytes], { type: 'image/png' })
+                break
+            case 'blobURL': {
+                const blob = new Blob([pngBytes], { type: 'image/png' })
+                rData.raw = URL.createObjectURL(blob)
+                break
+            }
+            case 'dataURL': {
+                const blob = new Blob([pngBytes], { type: 'image/png' })
+                rData.raw = await blobToDataURL(blob)
+                break
+            }
+        }
+        return rData
+    }
+
+    // 2. 原生 OffscreenCanvas（当 encoder 为 'auto' 或 'canvas'，且处于支持环境）
+    const canUseCanvas = encoder !== 'upng' && typeof window !== 'undefined' && !!window.OffscreenCanvas
+
+    if (canUseCanvas) {
+        if (!premultiplied && isPremultipliedAlpha(processedData)) {
+            processedData = ensureStraightAlpha(processedData)
+        }
+
         const canvas = new OffscreenCanvas(width, height)
         const ctx = canvas.getContext('2d')
         const imgData = new ImageData(new Uint8ClampedArray(processedData.buffer || processedData), width, height)
@@ -138,6 +182,7 @@ export async function rgbaToPng(userConfig) {
             }
         }
     } else {
+        // 3. 降级方案 B：纯 JS UPNG.js 兜底
         const upngBuffer = UPNG.encode([processedData.buffer || processedData], width, height, 0)
         switch (type) {
             case 'arrayBuffer':
@@ -202,10 +247,16 @@ export function ensureStraightAlpha(rgbaArray) {
     return data
 }
 
-export function blobToDataURL(blob) {
-    return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.readAsDataURL(blob)
-    })
+export async function blobToDataURL(blob) {
+    if (typeof FileReader !== 'undefined') {
+        return new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result)
+            reader.readAsDataURL(blob)
+        })
+    } else if (typeof Buffer !== 'undefined') {
+        const ab = blob.arrayBuffer ? await blob.arrayBuffer() : blob
+        const b64 = Buffer.from(ab).toString('base64')
+        return `data:${blob.type || 'image/png'};base64,${b64}`
+    }
 }

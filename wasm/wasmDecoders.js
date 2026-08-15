@@ -1,4 +1,4 @@
-import { LZ4_WASM_BASE64, LZMA_WASM_BASE64 } from './wasmBase64.js'
+import { LZ4_WASM_BASE64, LZMA_WASM_BASE64, PNG_WASM_BASE64 } from './wasmBase64.js'
 
 // Helper to convert base64 to Uint8Array
 function base64ToUint8Array(base64) {
@@ -105,3 +105,120 @@ export const lzmaBlockWASM = lzmaInstance
           },
       }
     : null
+
+// 3. Initialize PNG Encoder WASM (LodePNG WASM)
+let pngInstance = null
+try {
+    if (typeof WebAssembly !== 'undefined' && PNG_WASM_BASE64) {
+        const pngBytes = base64ToUint8Array(PNG_WASM_BASE64)
+        const pngModule = new WebAssembly.Module(pngBytes)
+        pngInstance = new WebAssembly.Instance(pngModule)
+    }
+} catch (err) {
+    console.warn('[unityfs-js] Failed to compile PNG WebAssembly (LodePNG):', err)
+}
+
+export const pngEncoderWASM = pngInstance
+    ? {
+          encode(rgbaData, width, height) {
+              if (rgbaData instanceof ArrayBuffer) {
+                  rgbaData = new Uint8Array(rgbaData)
+              }
+              const rgbaSize = rgbaData.byteLength
+              const exports = pngInstance.exports
+
+              // Allocate memory for input RGBA data
+              const inputPointer = exports.malloc(rgbaSize)
+              if (!inputPointer) {
+                  return null
+              }
+              const targetView = new Uint8Array(exports.memory.buffer, inputPointer, rgbaSize)
+              targetView.set(rgbaData)
+
+              // Allocate metadata pointers (outPointer at offset 0, outSize at offset 4)
+              const metadataPointer = exports.malloc(8)
+              if (!metadataPointer) {
+                  exports.free(inputPointer)
+                  return null
+              }
+
+              // Encode RGBA to PNG via LodePNG
+              const error = exports.lodepng_encode32(
+                  metadataPointer,
+                  metadataPointer + 4,
+                  inputPointer,
+                  width,
+                  height
+              )
+
+              // Free input buffer
+              exports.free(inputPointer)
+
+              if (error !== 0) {
+                  exports.free(metadataPointer)
+                  console.warn('[unityfs-js] lodepng_encode32 returned error code:', error)
+                  return null
+              }
+
+              // Read output pointer & size from metadata
+              const metadata = new Uint32Array(exports.memory.buffer, metadataPointer, 2)
+              const outputPointer = metadata[0]
+              const outputSize = metadata[1]
+              exports.free(metadataPointer)
+
+              // Copy encoded PNG data out
+              const output = new Uint8Array(exports.memory.buffer, outputPointer, outputSize).slice()
+              exports.free(outputPointer)
+
+              return output
+          },
+          decode(pngData) {
+              if (pngData instanceof ArrayBuffer) {
+                  pngData = new Uint8Array(pngData)
+              }
+              const pngSize = pngData.byteLength
+              const exports = pngInstance.exports
+
+              const inputPointer = exports.malloc(pngSize)
+              if (!inputPointer) {
+                  return null
+              }
+              new Uint8Array(exports.memory.buffer, inputPointer, pngSize).set(pngData)
+
+              // metadata: [outRgbaPtr (4B), width (4B), height (4B)]
+              const metadataPointer = exports.malloc(12)
+              if (!metadataPointer) {
+                  exports.free(inputPointer)
+                  return null
+              }
+
+              const error = exports.lodepng_decode32(
+                  metadataPointer,
+                  metadataPointer + 4,
+                  metadataPointer + 8,
+                  inputPointer,
+                  pngSize
+              )
+              exports.free(inputPointer)
+
+              if (error !== 0) {
+                  exports.free(metadataPointer)
+                  console.warn('[unityfs-js] lodepng_decode32 returned error code:', error)
+                  return null
+              }
+
+              const metadata = new Uint32Array(exports.memory.buffer, metadataPointer, 3)
+              const outputPointer = metadata[0]
+              const width = metadata[1]
+              const height = metadata[2]
+              exports.free(metadataPointer)
+
+              const outputSize = width * height * 4
+              const rgba = new Uint8Array(exports.memory.buffer, outputPointer, outputSize).slice()
+              exports.free(outputPointer)
+
+              return { data: rgba, width, height }
+          },
+      }
+    : null
+

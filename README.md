@@ -204,18 +204,26 @@ assetManager.dispose()
       - `'blob'`：输出标准的 PNG `Blob` 物理对象。
       - `'blobURL'`：直接创建并返回对应的 Blob 临时预览 URL 字符串 (`blob:http...`)，可以直接赋值给 `<img>` 标签的 `src` 属性。
       - `'dataURL'`：输出 Base64 格式的 Data URL 字符串 (如 `data:image/png;base64,...`)。
+    - **图片编码器设置 (`options.encoder`)**：
+      - `'auto'` (默认值)：**智能三级降级**。默认优先使用基于 WebAssembly 的 **LodePNG-WASM** 极速高压缩编码器；若当前环境不支持 WASM 或执行异常，自动降级至浏览器原生 **OffscreenCanvas**；若在无头环境（如 Node.js）中，自动降级至纯 JS 实现的 **UPNG.js** 兜底。
+      - `'wasm'`：强制使用 **LodePNG-WASM** 模块进行编码。
+      - `'canvas'`：强制使用浏览器/Worker 原生 **OffscreenCanvas** 编码。
+      - `'upng'`：强制使用纯 JavaScript 的 **UPNG.js** 编码器。
     - `AudioClip`：支持将 Unity 内存中的 FSB5 等音频容器重建并转码为 `WAV` / `OGG` 格式物理文件。与 `Texture2D` / `Sprite` 类似，它同样支持通过 `options.type` 快捷输出不同的数据格式（`arrayBuffer`, `blob`, `blobURL`, `dataURL`），无需用户手动转换。
     - `TextAsset`：直接提取为原始文本字符串或 ArrayBuffer。
     - `Mesh`：默认导出为标准的 `.obj` 模型文本文件。
     - `SkinnedMeshRenderer`：在注入 `three` 依赖后，自动组装骨骼结构并导出为标准的 `.glb` 二进制骨骼动画模型。
 
 ```javascript
-// 示例 1: 默认导出 PNG 二进制 ArrayBuffer
+// 示例 1: 默认导出 PNG 二进制 ArrayBuffer (使用默认 auto/LodePNG-WASM 编码器)
 const textureInfo = assetManager.getObjectInfosByClass('Texture2D')[0]
 const file = await assetManager.exportFile(textureInfo)
 // 返回结构： { src: "...", data: { raw: ArrayBuffer, width: 512, height: 512 } }
 
-// 示例 2: 快捷导出 Blob URL 直接用于前端 img.src 渲染 (无需手动转换)
+// 示例 2: 指定图片编码器 (如指定为纯 JS 的 UPNG 或浏览器 Canvas)
+const upngFile = await assetManager.exportFile(textureInfo, { encoder: 'upng' })
+
+// 示例 3: 快捷导出 Blob URL 直接用于前端 img.src 渲染 (无需手动转换)
 const imgUrlFile = await assetManager.exportFile(textureInfo, { type: 'blobURL' })
 const imgElement = document.createElement('img')
 imgElement.src = imgUrlFile.data.raw // 直接为 blob:http://... 字符串
