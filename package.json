@@ -1,6 +1,6 @@
 {
     "name": "unityfs-js",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "description": "A high-performance, lightweight pure JavaScript Unity assets and bundle parser/extractor.",
     "main": "index.js",
     "type": "module",

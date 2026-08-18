@@ -6,7 +6,7 @@ import { DecoderManager } from '../../../decoders/DecoderManager.js'
 const INV_ALPHA_TABLE = new Float32Array(256)
 for (let i = 1; i < 256; i++) INV_ALPHA_TABLE[i] = 255 / i
 
-export async function decodeTexture2DRgba(texture, worker = false, assetFile, userOptions = {}) {
+export async function decodeTexture2DRgba(texture, worker = true, assetFile, userOptions = {}) {
     if (texture.cachedRaw) {
         return texture.cachedRaw
     }

@@ -45,21 +45,41 @@ function wasmOutputToUint8Array(output) {
     if (!output) return null;
     try {
         const len = output.length;
+        if (!len) return new Uint8Array(0);
+
         const result = new Uint8Array(len);
-        for (let i = 0; i < len; i += 4) {
-            if (i + 3 < len) {
-                result[i] = output[i + 2];     // Red (WASM Blue at i+2)
-                result[i + 1] = output[i + 1]; // Green
-                result[i + 2] = output[i];     // Blue (WASM Red at i)
-                result[i + 3] = output[i + 3]; // Alpha
-            } else {
-                for (let j = i; j < len; j++) {
-                    result[j] = output[j];
-                }
+
+        // Ensure memory is completely detached from WASM boundary and 4-byte aligned
+        let src;
+        if (output instanceof Uint8Array && output.byteOffset % 4 === 0) {
+            src = output;
+        } else {
+            src = new Uint8Array(output);
+        }
+
+        const pixelCount = len >> 2;
+        if (pixelCount > 0) {
+            const src32 = new Uint32Array(src.buffer, src.byteOffset, pixelCount);
+            const dst32 = new Uint32Array(result.buffer, result.byteOffset, pixelCount);
+
+            for (let i = 0; i < pixelCount; i++) {
+                const pixel = src32[i];
+                // Swap Blue (byte 0) and Red (byte 2) in BGRA -> RGBA with 32-bit bitwise
+                dst32[i] = (pixel & 0xFF00FF00) | ((pixel >> 16) & 0xFF) | ((pixel & 0xFF) << 16);
             }
         }
+
+        const remainder = len & 3;
+        if (remainder > 0) {
+            const offset = len - remainder;
+            for (let j = 0; j < remainder; j++) {
+                result[offset + j] = src[offset + j];
+            }
+        }
+
         return result;
     } catch (e) {
+        console.error('wasmOutputToUint8Array failed:', e);
         return null;
     }
 }

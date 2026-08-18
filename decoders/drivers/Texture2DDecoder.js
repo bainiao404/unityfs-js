@@ -1,15 +1,7 @@
-import { DXTDecoder } from './decodeDxtWorker.js'
+import { getTextureDecoderPool } from './TextureDecoderPool.js'
 import initCRN from '../../vendor/crunchjs/crunch.js'
 import initUnityCRN from '../../vendor/crunchjs/unityCrunch.js'
 import * as texture2dDec from '../../wasm/texture2ddecoder-wasm/texture2ddecoder-any.js'
-
-let DXTDecoderWorker = null
-function getDXTDecoder() {
-    if (!DXTDecoderWorker) {
-        DXTDecoderWorker = new DXTDecoder()
-    }
-    return DXTDecoderWorker
-}
 
 async function decompressCRN(data) {
     const CRN_FORMAT = {
@@ -188,10 +180,25 @@ function decodeAlpha8(alpha8Data, baseColor = [255, 255, 255]) {
 export async function decodeTexture2D(data, width, height, textureFormat, options = {}) {
     const format = textureFormat.toLowerCase()
     let imageData = null
-    const worker = !!options.worker
     const version = options.version || [0, 0, 0, 0]
 
     const u8Data = data instanceof Uint8Array ? data : new Uint8Array(data.buffer || data)
+
+    // Route to Web Worker thread pool by default unless explicitly disabled (worker: false)
+    if (options.worker !== false) {
+        try {
+            const pool = getTextureDecoderPool()
+            const pooledResult = await pool.decode(u8Data, width, height, textureFormat, {
+                ...options,
+                worker: false, // Prevent worker from spawning sub-workers
+            })
+            if (pooledResult) {
+                return pooledResult
+            }
+        } catch (poolErr) {
+            console.warn('[Texture2DDecoder] Worker pool failed, fallback to main thread:', poolErr)
+        }
+    }
 
     switch (format) {
         case 'dxt1':
@@ -199,15 +206,7 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
         case 'dxt3':
         case 'dxt4':
         case 'dxt5':
-            if (worker) {
-                if (options.decoder === 'wasm' || !options.decoder) {
-                    imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
-                } else {
-                    imageData = await getDXTDecoder().decode(u8Data.slice(), width, height, textureFormat)
-                }
-            } else {
-                imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
-            }
+            imageData = await texture2dDec.decodeDxt(u8Data, width, height, textureFormat, options)
             break
         case 'rgb24':
             imageData = decodeRgb24(u8Data, width, height)
@@ -231,20 +230,7 @@ export async function decodeTexture2D(data, width, height, textureFormat, option
                 dxtData = await decompressCRN(u8Data)
             }
             const baseFormat = textureFormat.replace('crunched', '').toLowerCase()
-            if (worker) {
-                if (options.decoder === 'wasm' || !options.decoder) {
-                    imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
-                } else {
-                    imageData = await getDXTDecoder().decode(
-                        dxtData.buffer,
-                        width,
-                        height,
-                        baseFormat,
-                    )
-                }
-            } else {
-                imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
-            }
+            imageData = await texture2dDec.decodeDxt(dxtData, width, height, baseFormat, options)
             break
         }
         case 'bc7':

@@ -331,13 +331,13 @@ export class Texture2D extends Texture {
         updateTexture2DImage(this, pngBytes)
     }
 
-    async decodeRgba(worker = false, assetFile, options = {}) {
+    async decodeRgba(worker = true, assetFile, options = {}) {
         return decodeTexture2DRgba(this, worker, assetFile, options)
     }
 
     async createImg(userConfig, assetFile) {
         let { worker } = {
-            ...{ type: 'arrayBuffer', fileType: 'png', worker: false },
+            ...{ type: 'arrayBuffer', fileType: 'png', worker: true },
             ...userConfig,
         }
         let rgba = await this.decodeRgba(worker, assetFile, userConfig)
